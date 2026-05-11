@@ -1,0 +1,432 @@
+{
+  "meta": {
+    "project": "Ava Quran Backend",
+    "stack": "NestJS, PostgreSQL, Prisma, Redis, Docker, Quran Foundation Content API v4, Gemini",
+    "generatedFrom": [
+      "docs/PRD.md",
+      "docs/API_endpoints.md",
+      "docs/AbstracPRD.md"
+    ],
+    "notes": "Statuses: completed | in_progress | pending | blocked. Priority: P0 (blocker) .. P3. mvp=true aligns with PRD §14 must-build."
+  },
+  "tasks": [
+    {
+      "id": "INFRA-001",
+      "title": "Core platform & DevOps baseline",
+      "description": "Repository scaffold, containers, DB schema shell, health checks.",
+      "priority": "P0",
+      "mvp": true,
+      "status": "completed",
+      "subtasks": [
+        {
+          "id": "INFRA-001.1",
+          "title": "NestJS app + Prisma + Redis wiring",
+          "status": "completed"
+        },
+        {
+          "id": "INFRA-001.2",
+          "title": "Dockerfile + docker-compose (api, postgres, redis)",
+          "status": "completed"
+        },
+        {
+          "id": "INFRA-001.3",
+          "title": "Prisma schema + initial migration (users, reflections, collections, feed_history, streaks)",
+          "status": "completed"
+        },
+        {
+          "id": "INFRA-001.4",
+          "title": "GET /health (database + Redis checks)",
+          "status": "completed"
+        },
+        {
+          "id": "INFRA-001.5",
+          "title": "CI: lint, test, build Docker image (optional for MVP)",
+          "status": "pending",
+          "mvp": false
+        }
+      ]
+    },
+    {
+      "id": "AUTH-001",
+      "title": "Authentication — Quran.Foundation OAuth + Ava Quran JWT",
+      "description": "End-user login via Quran.Foundation; backend issues JWTs for API access per PRD §6.1 and API_endpoints §2.",
+      "priority": "P0",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "AUTH-001.1",
+          "title": "Register OAuth app + configure redirect URIs and env (QURAN_CLIENT_ID/SECRET)",
+          "status": "pending"
+        },
+        {
+          "id": "AUTH-001.2",
+          "title": "Implement POST /auth/login (return authorization URL or start flow)",
+          "status": "pending"
+        },
+        {
+          "id": "AUTH-001.3",
+          "title": "Implement GET /auth/callback (exchange code, upsert User, issue tokens)",
+          "status": "pending"
+        },
+        {
+          "id": "AUTH-001.4",
+          "title": "Implement POST /auth/refresh (rotation policy for refresh token)",
+          "status": "pending"
+        },
+        {
+          "id": "AUTH-001.5",
+          "title": "Implement POST /auth/logout (revoke refresh / session server-side)",
+          "status": "pending"
+        },
+        {
+          "id": "AUTH-001.6",
+          "title": "JwtAuthGuard + @CurrentUser() decorator; protect all non-public routes",
+          "status": "pending"
+        },
+        {
+          "id": "AUTH-001.7",
+          "title": "Rate limiting on auth endpoints (PRD §7)",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "QF-001",
+      "title": "Quran Foundation Content API v4 — server-side client",
+      "description": "OAuth2 client credentials, token cache, typed HTTP client for verses/chapters/search/audio per docs/API_endpoints.md §5.1.",
+      "priority": "P0",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "QF-001.1",
+          "title": "Env: QF client id/secret, base URL (prelive vs production), scope=content",
+          "status": "pending"
+        },
+        {
+          "id": "QF-001.2",
+          "title": "Token service: fetch + in-memory/Redis cache + retry on 401",
+          "status": "pending"
+        },
+        {
+          "id": "QF-001.3",
+          "title": "HTTP wrapper: x-auth-token + x-client-id on all requests",
+          "status": "pending"
+        },
+        {
+          "id": "QF-001.4",
+          "title": "Map ayah_key (e.g. 2:255) to upstream verse/chapter IDs used by Content API",
+          "status": "pending"
+        },
+        {
+          "id": "QF-001.5",
+          "title": "Retries with backoff for upstream failures (PRD §7 reliability)",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "QURAN-001",
+      "title": "Qur’an REST module (/quran/*)",
+      "description": "Proxy/aggregate Content API with Redis caching per PRD §6.4 and API_endpoints §5.3.",
+      "priority": "P0",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "QURAN-001.1",
+          "title": "GET /quran/ayah/:id — Arabic + translation + audio refs + optional tafsir flags",
+          "status": "pending"
+        },
+        {
+          "id": "QURAN-001.2",
+          "title": "GET /quran/surah/:id — chapter payload + verse list or pagination",
+          "status": "pending"
+        },
+        {
+          "id": "QURAN-001.3",
+          "title": "GET /quran/search — forward/query-map to upstream search",
+          "status": "pending"
+        },
+        {
+          "id": "QURAN-001.4",
+          "title": "GET /quran/related — related ayahs (search-based or dedicated upstream if available)",
+          "status": "pending"
+        },
+        {
+          "id": "QURAN-001.5",
+          "title": "Redis: ayah:{ayahKey} bundle cache + TTL/invalidation policy",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "USER-001",
+      "title": "Users module (/users/*)",
+      "description": "Profile and preferences per PRD §6.2.",
+      "priority": "P1",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "USER-001.1",
+          "title": "GET /users/me — return Prisma User + prefs aligned with schema",
+          "status": "pending"
+        },
+        {
+          "id": "USER-001.2",
+          "title": "PATCH /users/preferences — DTO validation (language, reciter, moodPreference)",
+          "status": "pending"
+        },
+        {
+          "id": "USER-001.3",
+          "title": "PATCH /users/onboarding — onboardingComplete and step flags if needed",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "FEED-001",
+      "title": "Personalized feed (/feed/*)",
+      "description": "Mood-aware feed, interactions, ranking, Redis feed cache per PRD §6.3, §8, §10.",
+      "priority": "P0",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "FEED-001.1",
+          "title": "Define feed card DTO (ayahKey, text refs, translation, audio URL, aiInsight?, tags)",
+          "status": "pending"
+        },
+        {
+          "id": "FEED-001.2",
+          "title": "GET /feed — pagination (page/limit or cursor); read mood + user context",
+          "status": "pending"
+        },
+        {
+          "id": "FEED-001.3",
+          "title": "Ranking v1: mood match + history + streak signals (PRD §10)",
+          "status": "pending"
+        },
+        {
+          "id": "FEED-001.4",
+          "title": "GET /feed/recommended — cold start / default surahs when sparse history",
+          "status": "pending"
+        },
+        {
+          "id": "FEED-001.5",
+          "title": "POST /feed/interactions — persist FeedHistory; update Redis streak keys if needed",
+          "status": "pending"
+        },
+        {
+          "id": "FEED-001.6",
+          "title": "Redis: feed:user:{userId}:{mood} cache + invalidation on preference change",
+          "status": "pending"
+        },
+        {
+          "id": "FEED-001.7",
+          "title": "Graceful degradation when AI or upstream Quran API fails",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "REFL-001",
+      "title": "Reflections module (/reflections/*)",
+      "description": "Private journal per ayah per PRD §6.5.",
+      "priority": "P1",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "REFL-001.1",
+          "title": "POST /reflections — create; validate ayahKey + content",
+          "status": "pending"
+        },
+        {
+          "id": "REFL-001.2",
+          "title": "GET /reflections — pagination; filter by ayahKey optional",
+          "status": "pending"
+        },
+        {
+          "id": "REFL-001.3",
+          "title": "DELETE /reflections/:id — owner-only",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "COLL-001",
+      "title": "Collections module (/collections/*)",
+      "description": "Themed ayah lists per PRD §6.6.",
+      "priority": "P1",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "COLL-001.1",
+          "title": "POST /collections + GET /collections",
+          "status": "pending"
+        },
+        {
+          "id": "COLL-001.2",
+          "title": "POST /collections/:id/ayahs + DELETE /collections/:id/ayahs/:ayahId (id = ayah key or document contract)",
+          "status": "pending"
+        },
+        {
+          "id": "COLL-001.3",
+          "title": "Optional: GET/PATCH/DELETE /collections/:id if product confirms",
+          "status": "pending",
+          "mvp": false
+        }
+      ]
+    },
+    {
+      "id": "STRK-001",
+      "title": "Streaks module (/streaks/*)",
+      "description": "Daily streak logic per PRD §6.7; Redis streak:{userId} optional mirror.",
+      "priority": "P1",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "STRK-001.1",
+          "title": "GET /streaks/me — current/longest/lastActiveDate",
+          "status": "pending"
+        },
+        {
+          "id": "STRK-001.2",
+          "title": "POST /streaks/update — idempotent daily tick; timezone rules",
+          "status": "pending"
+        },
+        {
+          "id": "STRK-001.3",
+          "title": "Sync streak cache in Redis when implemented",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "AI-001",
+      "title": "AI module — Gemini (/ai/*)",
+      "description": "Micro-insights and emotion tags with caching and safety per PRD §6.8.",
+      "priority": "P1",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "AI-001.1",
+          "title": "Gemini client + GEMINI_API_KEY config",
+          "status": "pending"
+        },
+        {
+          "id": "AI-001.2",
+          "title": "POST /ai/insight — prompt templates; cache insight:{ayahKey} (+ prompt version)",
+          "status": "pending"
+        },
+        {
+          "id": "AI-001.3",
+          "title": "POST /ai/emotion-tag — structured output for mood matching",
+          "status": "pending"
+        },
+        {
+          "id": "AI-001.4",
+          "title": "Rate limits + timeouts; never block feed indefinitely",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "CACHE-001",
+      "title": "Redis caching — PRD §8 coverage",
+      "description": "Implement remaining key patterns beyond partial feed/ayah work.",
+      "priority": "P2",
+      "mvp": true,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "CACHE-001.1",
+          "title": "trending:topics (optional MVP stub)",
+          "status": "pending",
+          "mvp": false
+        },
+        {
+          "id": "CACHE-001.2",
+          "title": "Document TTL + invalidation rules in code comments or README",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "OBS-001",
+      "title": "Logging, monitoring, and security hardening",
+      "description": "PRD §7 and §13.",
+      "priority": "P2",
+      "mvp": false,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "OBS-001.1",
+          "title": "Structured logs + request/correlation IDs",
+          "status": "pending"
+        },
+        {
+          "id": "OBS-001.2",
+          "title": "Sentry or equivalent (optional)",
+          "status": "pending"
+        },
+        {
+          "id": "OBS-001.3",
+          "title": "Global exception filter + sanitized client errors",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "API-001",
+      "title": "API contract & developer experience",
+      "description": "OpenAPI/Swagger or static OpenAPI file generated from Nest.",
+      "priority": "P2",
+      "mvp": false,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "API-001.1",
+          "title": "Add @nestjs/swagger + document all routes and DTOs",
+          "status": "pending"
+        },
+        {
+          "id": "API-001.2",
+          "title": "Versioning strategy (v1 path prefix) if product requires later",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "POST-001",
+      "title": "Post-MVP features (PRD §14 optional)",
+      "description": "Not required for first release.",
+      "priority": "P3",
+      "mvp": false,
+      "status": "pending",
+      "subtasks": [
+        {
+          "id": "POST-001.1",
+          "title": "Push notifications",
+          "status": "pending"
+        },
+        {
+          "id": "POST-001.2",
+          "title": "Realtime (WebSockets)",
+          "status": "pending"
+        },
+        {
+          "id": "POST-001.3",
+          "title": "Social feed + admin analytics dashboard",
+          "status": "pending"
+        }
+      ]
+    }
+  ]
+}

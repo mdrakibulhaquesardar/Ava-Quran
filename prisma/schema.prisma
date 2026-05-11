@@ -1,0 +1,101 @@
+// Ava Quran Backend — https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  passwordHash       String?
+  quranId              String?  @unique
+  quranAccessToken     String?
+  quranRefreshToken    String?
+  quranTokenExpiresAt  DateTime?
+  name                 String?
+  avatar               String?
+  preferredLanguage    String?
+  favoriteReciter      String?
+  onboardingComplete   Boolean  @default(false)
+  moodPreference       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  reflections Reflection[]
+  collections Collection[]
+  feedHistory FeedHistory[]
+  streak      Streak?
+
+  @@map("users")
+  @@index([quranId])
+}
+
+model Reflection {
+  id        String   @id @default(cuid())
+  userId    String
+  ayahKey   String
+  mood      String?
+  content   String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("reflections")
+}
+
+model Collection {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  createdAt DateTime @default(now())
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ayahs CollectionAyah[]
+
+  @@index([userId])
+  @@map("collections")
+}
+
+model CollectionAyah {
+  id             String   @id @default(cuid())
+  collectionId   String
+  ayahKey        String
+  createdAt      DateTime @default(now())
+
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, ayahKey])
+  @@index([collectionId])
+  @@map("collection_ayahs")
+}
+
+model FeedHistory {
+  id              String   @id @default(cuid())
+  userId          String
+  ayahKey         String
+  interactionType String
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("feed_history")
+}
+
+model Streak {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  currentStreak  Int       @default(0)
+  longestStreak  Int       @default(0)
+  lastActiveDate DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
