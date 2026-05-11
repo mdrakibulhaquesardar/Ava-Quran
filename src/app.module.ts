@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { QuranModule } from './quran/quran.module';
 import { FeedModule } from './feed/feed.module';
+import { ReflectionsModule } from './reflections/reflections.module';
 
 const envDir = join(__dirname, '..');
 
@@ -24,6 +25,7 @@ const envDir = join(__dirname, '..');
     AuthModule,
     QuranModule,
     FeedModule,
+    ReflectionsModule,
   ],
 })
 export class AppModule {}

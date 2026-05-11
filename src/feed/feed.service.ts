@@ -18,13 +18,22 @@ export class FeedService {
   // Fallback generic carousel when no mood is selected or found
   private readonly defaultKeys = ['1:1', '2:255', '39:53', '94:5', '14:7'];
 
+  // Mapping standard ISO language tags to official Content API Translation IDs
+  private readonly languageMap: Record<string, number> = {
+    en: 85,  // Saheeh International
+    bn: 161, // Taisirul Quran (Bengali)
+  };
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly quranService: QuranService,
   ) {}
 
-  async getFeed(userId: string, inputMood: string, page: number = 1, limit: number = 10) {
+  async getFeed(userId: string, inputMood: string, lang: string = 'en', page: number = 1, limit: number = 10) {
     const mood = inputMood?.toLowerCase() || 'peaceful';
+    
+    // Identify desired Translation ID, default to English (85) if code is unknown
+    const translationId = this.languageMap[lang.toLowerCase()] || 85;
     
     // 1. Get target keys for this specific mood
     const sourceKeys = this.moodMap[mood] || this.defaultKeys;
@@ -39,7 +48,7 @@ export class FeedService {
     // 4. Resolve and parallel hydrate actual content via proxy
     const hydrationPromises = pageKeys.map(async (key) => {
       try {
-        const content = await this.quranService.getVerseByKey(key);
+        const content = await this.quranService.getVerseByKey(key, translationId);
         return {
           ...content,
           moodTag: mood,
@@ -59,7 +68,7 @@ export class FeedService {
     if (remaining > 0) {
       const fillPromises = Array.from({ length: remaining }).map(async () => {
         try {
-          const content = await this.quranService.getRandomVerse();
+          const content = await this.quranService.getRandomVerse(translationId);
           return {
             ...content,
             moodTag: 'discovery',
@@ -84,9 +93,9 @@ export class FeedService {
     };
   }
 
-  async getRecommended(userId: string) {
+  async getRecommended(userId: string, lang: string = 'en') {
     // Returns fixed high quality highlights
-    return this.getFeed(userId, 'peaceful', 1, 5);
+    return this.getFeed(userId, 'peaceful', lang, 1, 5);
   }
 
   async trackInteraction(userId: string, dto: CreateInteractionDto) {

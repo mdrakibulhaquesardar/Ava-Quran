@@ -13,27 +13,34 @@ export class FeedController {
 
   @ApiOperation({ summary: 'Get paginated, personalized vertical feed' })
   @ApiQuery({ name: 'mood', required: false, description: 'Target mood tag (e.g. anxious, peaceful)' })
+  @ApiQuery({ name: 'lang', required: false, description: 'ISO Language code e.g. "en", "bn" for translation' })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
   @Get()
   async getFeed(
     @Req() req: any,
     @Query('mood') mood: string = '',
+    @Query('lang') lang: string = 'en',
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
   ) {
     return this.feedService.getFeed(
       req.user.userId, 
       mood, 
+      lang,
       parseInt(page, 10), 
       parseInt(limit, 10)
     );
   }
 
   @ApiOperation({ summary: 'Fetch highly recommended standard highlights' })
+  @ApiQuery({ name: 'lang', required: false, description: 'ISO Language code e.g. "en", "bn"' })
   @Get('recommended')
-  async getRecommended(@Req() req: any) {
-    return this.feedService.getRecommended(req.user.userId);
+  async getRecommended(
+    @Req() req: any,
+    @Query('lang') lang: string = 'en',
+  ) {
+    return this.feedService.getRecommended(req.user.userId, lang);
   }
 
   @ApiOperation({ summary: 'Log analytic signals from frontend (saves, swipes, plays)' })

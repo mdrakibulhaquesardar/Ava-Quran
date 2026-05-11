@@ -111,6 +111,11 @@ export class QuranService {
   }
 
   async getVerseByKey(verseKey: string, translationId: number = 85): Promise<any> {
+    // Validate Input format instantly
+    if (!/^\d+:\d+$/.test(verseKey)) {
+      throw new HttpException(`Invalid Verse Key format '${verseKey}'. Expected format: 'chapter:verse' (e.g., 2:255)`, HttpStatus.BAD_REQUEST);
+    }
+
     const cacheKey = `verse:${verseKey}:tr:${translationId}`;
     
     try {
@@ -184,6 +189,40 @@ export class QuranService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new HttpException('Failed to fetch random data from Quran Foundation', HttpStatus.BAD_GATEWAY);
+    }
+  }
+
+  /**
+   * High-flexibility method to proxy generic GET requests to official Quran Foundation,
+   * automatically injecting caching (1 hour) and security headers.
+   */
+  async proxyGet(relativePath: string, params: Record<string, any> = {}): Promise<any> {
+    // Build deterministic cache key from path and sorted query params
+    const queryString = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
+    const cacheKey = `quran:proxy:${relativePath}:${queryString}`;
+
+    try {
+      const cached = await this.redisService.getClient().get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+
+    try {
+      const headers = await this.getAuthHeaders();
+      // Prepend slash if not present
+      const cleanPath = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
+      const url = `${this.apiBase}${cleanPath}`;
+
+      const response = await firstValueFrom(
+        this.httpService.get(url, { headers, params })
+      );
+
+      // Cache generic proxy result for 1 hour (vs 24h for canonical verses)
+      this.redisService.getClient().set(cacheKey, JSON.stringify(response.data), 'EX', 3600).catch(() => {});
+      
+      return response.data;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new HttpException('Upstream Quran API Proxy Failure', HttpStatus.BAD_GATEWAY);
     }
   }
 }

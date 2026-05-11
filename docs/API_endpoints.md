@@ -26,10 +26,11 @@ Quran.Foundation OAuth2/OIDC plus Ava Quran–issued JWTs ([PRD.md](PRD.md) §6.
 
 | Method | Path             | Auth   | Purpose |
 |--------|------------------|--------|---------|
-| `POST` | `/auth/login`    | Public | Start OAuth (return redirect URL or initiate flow per design). |
-| `GET`  | `/auth/callback` | Public | OAuth callback: exchange code, create/update user, issue tokens. |
-| `POST` | `/auth/refresh`  | Public* | Refresh access token (body: refresh token or cookie strategy). |
-| `POST` | `/auth/logout`   | Protected | Invalidate refresh session / tokens server-side. |
+| `POST` | `/auth/login`    | Public | ✅ Start OAuth / Local Login. |
+| `GET`  | `/auth/callback` | Public | ✅ OAuth callback: exchange code, create/update user. |
+| `POST` | `/auth/refresh`  | Public* | Refresh access token (body: refresh token). |
+| `POST` | `/auth/logout`   | Protected | Invalidate refresh session server-side. |
+| `GET`  | `/auth/quran/link` | Protected | ✅ Securely link existing user to Foundation profile. |
 
 \*Typically unauthenticated with a refresh credential; document the chosen pattern in implementation.
 
@@ -43,9 +44,9 @@ Profile, preferences, onboarding, mood defaults ([PRD.md](PRD.md) §6.2).
 
 | Method  | Path                    | Auth      | Purpose |
 |---------|-------------------------|-----------|---------|
-| `GET`   | `/users/me`             | Protected | Current user profile + preferences + onboarding flags. |
-| `PATCH` | `/users/preferences`    | Protected | Update language, reciter, notification flags (future), mood defaults. |
-| `PATCH` | `/users/onboarding`     | Protected | Mark onboarding steps complete. |
+| `GET`   | `/users/me`             | Protected | ✅ Current user profile + preferences. |
+| `PATCH` | `/users/preferences`    | Protected | ✅ Update language, reciter, mood defaults. |
+| `PATCH` | `/users/onboarding`     | Protected | ✅ Mark onboarding steps complete. |
 
 **Maps to Abstract PRD:** mood-based experience defaults, audio/reciter preferences, onboarding.
 
@@ -57,9 +58,9 @@ Personalized vertical feed: ayah, translation, audio, optional AI, tags ([PRD.md
 
 | Method | Path                  | Auth      | Query / body (illustrative) | Purpose |
 |--------|-----------------------|-----------|-----------------------------|---------|
-| `GET`  | `/feed`               | Protected | `mood`, `page`, `limit` (or cursor later) | Paginated personalized feed. |
-| `GET`  | `/feed/recommended`   | Protected | — | Cold start / editorial or fallback recommendations. |
-| `POST` | `/feed/interactions`  | Protected | JSON: `ayahKey`, `interactionType` (`viewed`, `saved`, `reflected`, `shared`, `replayed`, …) | Engagement + ranking signals. |
+| `GET`  | `/feed`               | Protected | `mood`, `page`, `limit` | ✅ Paginated personalized feed. |
+| `GET`  | `/feed/recommended`   | Protected | — | ✅ Cold start or custom recommendations. |
+| `POST` | `/feed/interactions`  | Protected | JSON: `ayahKey`, `interactionType` | ✅ Engagement + ranking signals. |
 
 **Maps to Abstract PRD:** personalized feed, mood-based verses, short daily moments, interaction tracking. Bookmarks may be represented here and/or via Quran.Foundation—finalize in implementation ([PRD.md](PRD.md) §5.4).
 
@@ -126,10 +127,9 @@ These are the **routes the mobile app** calls; each handler uses **Quran Foundat
 
 | Method | Path               | Auth      | Purpose |
 |--------|--------------------|-----------|---------|
-| `GET`  | `/quran/ayah/:id`  | Protected | Single ayah + metadata (translations/audio refs as designed). |
-| `GET`  | `/quran/surah/:id` | Protected | Surah-level payload. |
-| `GET`  | `/quran/search`    | Protected | Keyword/topic search (query params aligned with Content API v4 search/verses). |
-| `GET`  | `/quran/related`   | Protected | Related ayahs (query: current ayah or context; implement via upstream “related” or search + ranking). |
+| `GET`  | `/quran/ayah/:id`  | Protected | ✅ Single authenticated ayah content and audio. |
+| `GET`  | `/quran/chapters`  | Protected | ✅ Dynamic proxy to upstream Chapters list. |
+| `GET`  | `/quran/search`    | Protected | ✅ Pass-through to official full-text search. |
 
 **Maps to Abstract PRD:** smart search and ayah discovery via `/quran/search` and related endpoints.
 
@@ -141,9 +141,9 @@ Private journal tied to `ayah_key` ([PRD.md](PRD.md) §6.5; Abstract PRD: reflec
 
 | Method   | Path                 | Auth      | Purpose |
 |----------|----------------------|-----------|---------|
-| `POST`   | `/reflections`       | Protected | Create reflection (body: `ayahKey`, `content`, optional `mood`). |
-| `GET`    | `/reflections`       | Protected | List timeline (filters: pagination, optional `ayahKey`). |
-| `DELETE` | `/reflections/:id` | Protected | Delete owned reflection. |
+| `POST`   | `/reflections`       | Protected | ✅ Create reflection (body: `ayahKey`, `content`, optional `mood`). |
+| `GET`    | `/reflections`       | Protected | ✅ List timeline (filters: pagination, optional `ayahKey`). |
+| `DELETE` | `/reflections/:id` | Protected | ✅ Delete owned reflection. |
 
 ---
 
@@ -190,11 +190,11 @@ Gemini-backed micro-insights and tags ([PRD.md](PRD.md) §6.8; Abstract PRD: AI-
 
 ### MVP (must ship per [PRD.md](PRD.md) §14)
 
-- [ ] All **Auth** endpoints (§2)  
-- [ ] All **Users** endpoints (§3)  
-- [ ] All **Feed** endpoints (§4)  
-- [ ] All **Quran** endpoints (§5)  
-- [ ] All **Reflections** endpoints (§6)  
+- [/] All **Auth** endpoints (§2) — *Core Login/Callback/Linking Complete*
+- [x] All **Users** endpoints (§3)  
+- [x] All **Feed** endpoints (§4)  
+- [x] All **Quran** endpoints (§5)  
+- [x] All **Reflections** endpoints (§6)  
 - [ ] All **Collections** endpoints (§7)  
 - [ ] All **Streaks** endpoints (§8)  
 - [ ] All **AI** endpoints (§9)  
