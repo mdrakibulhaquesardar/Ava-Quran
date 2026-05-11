@@ -47,5 +47,12 @@ services:
       redis:
         condition: service_healthy
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    ports:
+      - "8001:5540"
+    depends_on:
+      - redis
+
 volumes:
   pgdata:

@@ -56,6 +56,39 @@ The spiritual sanctuary that logs deep thinking and personal connection with ver
 | :--- | :--- | :--- |
 | `POST /reflections` | **"Reflect" Floating Action Button** | User types a note about an Ayah. Saves their thought with timestamps and optional mood metadata to the cloud. |
 | `GET /reflections` | **Profile -> "My Notes" Screen** | Fetches reverse-chronological log of all recorded realizations across time. Supports filtering by `?ayahKey` to see past thoughts on the current verse. |
-| `DELETE /reflections/:id` | **Swipe-to-Delete Entry** | Permanently wipes an unwanted or accidental note from their spiritual timeline. |
+| `DELETE` | `/reflections/:id` | **Swipe-to-Delete Entry** | Permanently wipes an unwanted or accidental note from their spiritual timeline. |
+
+---
+
+## 📁 6. Themed Collections (`/collections`)
+Allows personalized bookmarking hierarchies (e.g. Creating separate folders for "Patience", "Night Prayers").
+
+| Endpoint | Mobile Action | Mobile App Use-Case |
+| :--- | :--- | :--- |
+| `POST /collections` | **"New Collection" Prompt** | Creates a named container (e.g., "Ramadan Goal"). |
+| `GET /collections` | **"My Saves" Main View** | Lists all user folders with counts like "Patience (5 verses)", "Calm (12 verses)". |
+| `POST /collections/:id/ayahs` | **Ayah -> "Save to..." Dialog** | User taps specific folder to physically store the current verse inside that directory. |
+| `DELETE /collections/:id/ayahs/:key` | **Remove Icon in List** | Pulls the verse out of that theme group without deleting other entries. |
+
+---
+
+## 🔥 7. Active Streaks (`/streaks`)
+The primary gamification driver maintaining daily user retention and consistency.
+
+| Endpoint | Mobile Action | Mobile App Use-Case |
+| :--- | :--- | :--- |
+| `GET /streaks/me` | **App Header 🔥 Icon** | Displays current burn counter (e.g., "12 Days 🔥"). Also used to inform the user if they are on the verge of breaking a record. |
+| `POST /streaks/update` | **Auto-triggered on Finish Reading** | Invisibly fired when the user performs their first interaction of the day, safely calculating and bumping the chain tally server-side. |
+
+---
+---
+
+## 🤖 8. Smart AI Assist (`/ai`)
+Generative micro-insights and spiritual context extraction powered by specialized LLM pipelines.
+
+| Endpoint | Mobile Action | Mobile App Use-Case |
+| :--- | :--- | :--- |
+| `POST /ai/insight` | **Feed Card Reflection Slot** | Dynamically generates a 2-3 sentence modern, relatable summary for the given verse to enrich the reading experience. Automatically cached in backend for instant hot-reloads. |
+| `POST /ai/emotion-tag` | **Mood-based Categorizer** | Analyzes an Ayah and maps it automatically to emotional triggers (e.g., `["hope", "patience"]`). Mobile team uses this to fill tag clouds or enable filtering by specific mental state feelings. |
 
 ---

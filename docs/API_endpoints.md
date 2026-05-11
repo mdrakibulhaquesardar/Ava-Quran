@@ -153,10 +153,10 @@ Themed lists of ayahs ([PRD.md](PRD.md) §6.6; Abstract PRD: save & organize by 
 
 | Method   | Path                               | Auth      | Purpose |
 |----------|------------------------------------|-----------|---------|
-| `POST`   | `/collections`                     | Protected | Create collection (`title`, …). |
-| `GET`    | `/collections`                     | Protected | List user’s collections. |
-| `POST`   | `/collections/:id/ayahs`           | Protected | Add ayah to collection (`ayahKey` in body). |
-| `DELETE` | `/collections/:id/ayahs/:ayahId`   | Protected | Remove ayah from collection (`ayahId` = stable ayah key or internal id—define in API spec). |
+| `POST`   | `/collections`                     | Protected | ✅ Create collection (`title`). |
+| `GET`    | `/collections`                     | Protected | ✅ List user’s collections. |
+| `POST`   | `/collections/:id/ayahs`           | Protected | ✅ Add ayah to collection. |
+| `DELETE` | `/collections/:id/ayahs/:ayahId`   | Protected | ✅ Remove ayah from collection. |
 
 **Note:** [PRD.md](PRD.md) does not mandate `GET /collections/:id` or rename/delete collection; add in OpenAPI when product confirms.
 
@@ -168,8 +168,8 @@ Daily habit / consistency ([PRD.md](PRD.md) §6.7; Abstract PRD: streaks).
 
 | Method | Path              | Auth      | Purpose |
 |--------|-------------------|-----------|---------|
-| `GET`  | `/streaks/me`     | Protected | Current streak, longest streak, last active date. |
-| `POST` | `/streaks/update` | Protected | Idempotent daily tick / activity update. |
+| `GET`  | `/streaks/me`     | Protected | ✅ Current streak, longest streak, last active date. |
+| `POST` | `/streaks/update` | Protected | ✅ Idempotent daily tick / activity update. |
 
 ---
 
@@ -179,8 +179,8 @@ Gemini-backed micro-insights and tags ([PRD.md](PRD.md) §6.8; Abstract PRD: AI-
 
 | Method | Path               | Auth      | Purpose |
 |--------|--------------------|-----------|---------|
-| `POST` | `/ai/insight`      | Protected | Body: `ayahKey`, context; returns short insight (cached per policy). |
-| `POST` | `/ai/emotion-tag` | Protected | Body: ayah or text; returns emotional tags for mood matching. |
+| `POST` | `/ai/insight`      | Protected | ✅ Body: `ayahKey`; returns cached/fresh short reflection. |
+| `POST` | `/ai/emotion-tag` | Protected | ✅ Body: `ayahKey`; returns cached/fresh array of emotions. |
 
 **NFR:** Rate limiting and graceful degradation (e.g. feed without AI) per [PRD.md](PRD.md) §7.
 
@@ -195,8 +195,8 @@ Gemini-backed micro-insights and tags ([PRD.md](PRD.md) §6.8; Abstract PRD: AI-
 - [x] All **Feed** endpoints (§4)  
 - [x] All **Quran** endpoints (§5)  
 - [x] All **Reflections** endpoints (§6)  
-- [ ] All **Collections** endpoints (§7)  
-- [ ] All **Streaks** endpoints (§8)  
+- [x] All **Collections** endpoints (§7)  
+- [x] All **Streaks** endpoints (§8)  
 - [ ] All **AI** endpoints (§9)  
 - [x] **`GET /health`** (§1)  
 

@@ -165,4 +165,38 @@ export class AuthService {
       throw new UnauthorizedException('Failed to authenticate with Quran.Foundation', error?.message);
     }
   }
+
+  async refreshUserQuranToken(userId: string): Promise<string | null> {
+    const user = await this.usersService.findOneById(userId);
+    if (!user || !user.quranRefreshToken) return null;
+
+    const baseUrl = this.configService.get<string>('Quran_END_POINT') || 'https://prelive-oauth2.quran.foundation';
+    const clientId = this.configService.get<string>('QURAN_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('QURAN_CLIENT_SECRET');
+
+    try {
+      const tokenRes = await firstValueFrom(
+        this.httpService.post(`${baseUrl}/oauth/token`, {
+          grant_type: 'refresh_token',
+          refresh_token: user.quranRefreshToken,
+          client_id: clientId,
+          client_secret: clientSecret,
+        }),
+      );
+
+      const { access_token, refresh_token, expires_in } = tokenRes.data;
+      const expiresAt = expires_in ? new Date(Date.now() + expires_in * 1000) : null;
+
+      await this.usersService.updateUser(userId, {
+        quranAccessToken: access_token,
+        quranRefreshToken: refresh_token || user.quranRefreshToken, // fallback if not rotated
+        quranTokenExpiresAt: expiresAt,
+      });
+
+      return access_token;
+    } catch (error) {
+      console.error(`[Quran OAuth] Failed to refresh token for user \${userId}:`, error.message);
+      return null;
+    }
+  }
 }

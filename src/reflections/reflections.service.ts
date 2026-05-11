@@ -1,13 +1,17 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReflectionDto } from './dto/create-reflection.dto';
+import { QuranSyncService } from '../quran-sync/quran-sync.service';
 
 @Injectable()
 export class ReflectionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly syncService: QuranSyncService,
+  ) {}
 
   async create(userId: string, dto: CreateReflectionDto) {
-    return this.prisma.reflection.create({
+    const res = await this.prisma.reflection.create({
       data: {
         userId,
         ayahKey: dto.ayahKey,
@@ -15,6 +19,11 @@ export class ReflectionsService {
         mood: dto.mood,
       },
     });
+
+    // Trigger upstream sync (fire and forget, handles checks internally)
+    this.syncService.syncReflectionToNotes(userId, dto.ayahKey, dto.content);
+
+    return res;
   }
 
   async findAll(userId: string, page: number = 1, limit: number = 20, ayahKey?: string) {
