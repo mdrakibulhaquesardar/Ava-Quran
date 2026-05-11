@@ -7,14 +7,19 @@ import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { User } from '@prisma/client';
 import { firstValueFrom } from 'rxjs';
+import { RedisService } from '../redis/redis.service';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly REFRESH_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly redisService: RedisService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -32,7 +37,7 @@ export class AuthService {
       name: dto.name,
     });
 
-    return this.generateToken(user);
+    return await this.generateToken(user);
   }
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -50,13 +55,26 @@ export class AuthService {
   }
 
   async login(user: any) {
-    return this.generateToken(user);
+    return await this.generateToken(user);
   }
 
-  generateToken(user: Partial<User>) {
+  async generateToken(user: Partial<User>) {
+    if (!user.id) throw new UnauthorizedException('Authentication failure: Incomplete payload');
     const payload = { sub: user.id, email: user.email };
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = randomUUID();
+
+    // Map the token to the User ID for rapid lookups
+    const tokenKey = `auth:rt:${refreshToken}`;
+    await this.redisService.getClient().set(tokenKey, user.id, 'EX', this.REFRESH_TTL);
+    
+    // Optionally link user to token to support single-session logout (delete current token index)
+    const userKey = `auth:usr_rt:${user.id}`;
+    await this.redisService.getClient().set(userKey, refreshToken, 'EX', this.REFRESH_TTL);
+
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: accessToken,
+      refresh_token: refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -64,6 +82,38 @@ export class AuthService {
       },
     };
   }
+
+  async logout(userId: string): Promise<void> {
+    const userKey = `auth:usr_rt:${userId}`;
+    const currentToken = await this.redisService.getClient().get(userKey);
+    if (currentToken) {
+      await this.redisService.getClient().del(`auth:rt:${currentToken}`);
+    }
+    await this.redisService.getClient().del(userKey);
+  }
+
+  async refreshAccessToken(token: string): Promise<{ access_token: string; refresh_token: string }> {
+    const tokenKey = `auth:rt:${token}`;
+    const userId = await this.redisService.getClient().get(tokenKey);
+
+    if (!userId) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Optional: Rotates token immediately for enhanced security
+    await this.redisService.getClient().del(tokenKey);
+    
+    const user = await this.usersService.findOneById(userId);
+    if (!user) throw new UnauthorizedException('User not found');
+
+    // Generate shiny new token pair!
+    const pair = await this.generateToken(user);
+    return {
+      access_token: pair.access_token,
+      refresh_token: pair.refresh_token,
+    };
+  }
+
 
   getQuranOAuthUrl(redirectUri: string, state?: string) {
     const baseUrl = this.configService.get<string>('Quran_END_POINT') || 'https://prelive-oauth2.quran.foundation';
@@ -130,7 +180,7 @@ export class AuthService {
         user = await this.usersService.findOneById(state);
         if (user) {
           user = await this.usersService.updateUser(user.id, { quranId, ...tokenData });
-          return this.generateToken(user);
+          return await this.generateToken(user);
         }
       }
 
@@ -141,7 +191,7 @@ export class AuthService {
         if (user) {
           // Auto-link if matching emails
           user = await this.usersService.updateUser(user.id, { quranId, ...tokenData });
-          return this.generateToken(user);
+          return await this.generateToken(user);
         }
       }
 
@@ -159,7 +209,7 @@ export class AuthService {
         });
       }
 
-      return this.generateToken(user);
+      return await this.generateToken(user);
 
     } catch (error) {
       throw new UnauthorizedException('Failed to authenticate with Quran.Foundation', error?.message);

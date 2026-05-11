@@ -6,19 +6,21 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
+import { RedisModule } from '../redis/redis.module';
 import { LocalStrategy } from './strategies/local.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
     UsersModule,
+    RedisModule,
     PassportModule,
     HttpModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'change-me-in-production',
-        signOptions: { expiresIn: '7d' }, // adjustable config
+        signOptions: { expiresIn: '1h' }, // Secure short-lived access tokens
       }),
       inject: [ConfigService],
     }),

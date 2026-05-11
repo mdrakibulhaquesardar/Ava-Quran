@@ -13,6 +13,8 @@ Handles creation, protection, and bridging of user sessions.
 | `POST /auth/login` | **Sign In Screen** | User enters credentials to receive the local JWT access token for further restricted requests. |
 | `GET /auth/quran/login` | **"Sign in with Quran Foundation" Button** | Redirects the built-in webview to the verified upstream provider login. Automatic cross-sync handler. |
 | `GET /auth/quran/link` | **Settings -> "Link Profile"** | Merges an existing local Email user with their official Quran.Foundation cloud history/account. |
+| `POST /auth/refresh` | **Silent Background Call** | Automatic routine when current access token expires. Fetches replacement crypto-tokens without user disruption. |
+| `POST /auth/logout` | **Settings -> "Log Out"** | Securely invalidates sessions and terminates valid cache keys instantly on our backend. |
 
 ---
 

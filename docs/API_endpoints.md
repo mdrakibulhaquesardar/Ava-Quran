@@ -28,8 +28,8 @@ Quran.Foundation OAuth2/OIDC plus Ava Quran–issued JWTs ([PRD.md](PRD.md) §6.
 |--------|------------------|--------|---------|
 | `POST` | `/auth/login`    | Public | ✅ Start OAuth / Local Login. |
 | `GET`  | `/auth/callback` | Public | ✅ OAuth callback: exchange code, create/update user. |
-| `POST` | `/auth/refresh`  | Public* | Refresh access token (body: refresh token). |
-| `POST` | `/auth/logout`   | Protected | Invalidate refresh session server-side. |
+| `POST` | `/auth/refresh`  | Public* | ✅ Refresh access token via rotation. |
+| `POST` | `/auth/logout`   | Protected | ✅ Invalidate current session server-side. |
 | `GET`  | `/auth/quran/link` | Protected | ✅ Securely link existing user to Foundation profile. |
 
 \*Typically unauthenticated with a refresh credential; document the chosen pattern in implementation.
@@ -190,14 +190,14 @@ Gemini-backed micro-insights and tags ([PRD.md](PRD.md) §6.8; Abstract PRD: AI-
 
 ### MVP (must ship per [PRD.md](PRD.md) §14)
 
-- [/] All **Auth** endpoints (§2) — *Core Login/Callback/Linking Complete*
+- [x] All **Auth** endpoints (§2)
 - [x] All **Users** endpoints (§3)  
 - [x] All **Feed** endpoints (§4)  
 - [x] All **Quran** endpoints (§5)  
 - [x] All **Reflections** endpoints (§6)  
 - [x] All **Collections** endpoints (§7)  
 - [x] All **Streaks** endpoints (§8)  
-- [ ] All **AI** endpoints (§9)  
+- [x] All **AI** endpoints (§9)  
 - [x] **`GET /health`** (§1)  
 
 ### Optional / follow-up (not required for first PRD MVP)

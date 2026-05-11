@@ -6,6 +6,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -25,6 +26,21 @@ export class AuthController {
   async login(@Req() req: any) {
     // LocalAuthGuard attaches 'user' object from LocalStrategy validate
     return this.authService.login(req.user);
+  }
+
+  @ApiOperation({ summary: 'Refresh an expired access token' })
+  @Post('refresh')
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshAccessToken(dto.refreshToken);
+  }
+
+  @ApiOperation({ summary: 'Log out and invalidate session refresh tokens' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Req() req: any) {
+    await this.authService.logout(req.user.userId);
+    return { success: true, message: 'Logged out successfully' };
   }
 
   @ApiOperation({ summary: 'Redirect user to Quran.Foundation login' })

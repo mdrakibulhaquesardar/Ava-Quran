@@ -94,7 +94,63 @@ export class FeedService {
   }
 
   async getRecommended(userId: string, lang: string = 'en') {
-    // Returns fixed high quality highlights
+    // 1. Get most 'loved' or 'saved' ayahs globally from entire community data
+    const topInteractions = await this.prisma.feedHistory.groupBy({
+      by: ['ayahKey'],
+      where: {
+        interactionType: { in: ['loved', 'saved', 'reflected'] },
+      },
+      _count: {
+        ayahKey: true,
+      },
+      orderBy: {
+        _count: {
+          ayahKey: 'desc',
+        },
+      },
+      take: 10,
+    });
+
+    console.log(`[DEBUG REC] Found \${topInteractions.length} interactions for recommendation.`);
+    const translationId = this.languageMap[lang.toLowerCase()] || 85;
+
+    // 2. If community logic finds items, build a feed from them!
+    if (topInteractions.length > 0) {
+      const topKeys = topInteractions.map((item) => item.ayahKey);
+      console.log(`[DEBUG REC] Keys attempting to hydrate:`, topKeys);
+
+      const hydrationPromises = topKeys.map(async (key) => {
+        try {
+          const content = await this.quranService.getVerseByKey(key, translationId);
+          return {
+            ...content,
+            moodTag: 'popular',
+            aiInsight: this.generateMockInsight(key, 'popular'),
+          };
+        } catch (e) {
+          console.error(`[DEBUG REC] Hydration failed for key \${key}:`, e.message);
+          return null;
+        }
+      });
+      
+      const realResults = (await Promise.all(hydrationPromises)).filter(Boolean);
+      console.log(`[DEBUG REC] Hydrated \${realResults.length} verses successfully.`);
+      
+      // If we successfully loaded popular data, return it!
+      if (realResults.length > 0) {
+        return {
+          data: realResults,
+          meta: {
+            total: realResults.length,
+            isDynamicCommunityFeed: true,
+          },
+        };
+      }
+    }
+    
+    console.log(`[DEBUG REC] Reverting to peaceful fallback due to empty results.`);
+
+    // 3. Fallback to fixed high quality highlights if no data yet (cold start)
     return this.getFeed(userId, 'peaceful', lang, 1, 5);
   }
 
