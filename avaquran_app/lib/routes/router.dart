@@ -1,3 +1,5 @@
+import '/resources/pages/blog_details_page.dart';
+import '/resources/pages/profile_page.dart';
 import '/resources/pages/video_feed_page.dart';
 import '/resources/pages/blogs_page.dart';
 import '/resources/pages/videos_page.dart';
@@ -28,4 +30,6 @@ appRouter() => nyRoutes((router) {
       router.add(VideosPage.path);
       router.add(BlogsPage.path);
       router.add(VideoFeedPage.path);
+      router.add(ProfilePage.path);
+      router.add(BlogDetailsPage.path);
 });

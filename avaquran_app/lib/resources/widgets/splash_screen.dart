@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:nylo_framework/nylo_framework.dart';
 import '/resources/widgets/logo_widget.dart';
 import 'dart:math';
 
@@ -16,15 +15,112 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const Color brandAccent = Color(0xFF267B92);
+
     return Scaffold(
-      body: Container(
-        color: Colors.white,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [Logo(), Spacing.vertical(50), AnimatedLoader()],
+      body: Stack(
+        children: [
+          // 1. BASE BACKGROUND COLOR WITH SOFT GRADIENT
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFFFFFFF),
+                  Color(0xFFF6FAF9),
+                ],
+              ),
+            ),
           ),
-        ),
+
+          // 2. ISLAMIC PATTERN OVERLAY
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.6,
+              child: Image.asset(
+                "assets/images/pattern_light_soft.png",
+                repeat: ImageRepeat.repeat,
+                fit: BoxFit.none,
+                scale: 2.5, // Control pattern density
+              ),
+            ),
+          ),
+
+          // 3. RADIAL GLOW AURA
+          Center(
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    brandAccent.withAlpha(30),
+                    brandAccent.withAlpha(0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 4. CORE CONTENT (LOCKED CENTER)
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: brandAccent.withAlpha(20),
+                        blurRadius: 30,
+                        spreadRadius: 10,
+                      )
+                    ],
+                  ),
+                  child: Logo(height: 100, width: 100),
+                ),
+                const SizedBox(height: 50),
+                const AnimatedLoader(
+                  size: 40,
+                  color: brandAccent,
+                ),
+              ],
+            ),
+          ),
+
+          // 5. BOTTOM BRANDING & VERSION
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  Image.asset(
+                    "assets/images/Icon_text.png",
+                    height: 50,
+                  ),
+                  
+                  const Text(
+                    "Version 1.0.0",
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+                ),
+          ),
+        ],
       ),
     );
   }
@@ -37,7 +133,7 @@ class AnimatedLoader extends StatefulWidget {
   const AnimatedLoader({
     super.key,
     this.size = 50.0,
-    this.color = Colors.blue,
+    this.color = const Color(0xFF267B92),
   });
 
   @override

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/resources/pages/auth_page.dart';
-import '/resources/pages/home_page.dart';
+import '/resources/pages/feed_page.dart';
+import '/app/networking/api_service.dart';
+import '/config/storage_keys.dart';
 
 class OnboardingPage extends NyStatefulWidget {
   static RouteView path = ("/onboarding", (_) => OnboardingPage());
@@ -53,8 +55,25 @@ class _OnboardingPageState extends NyPage<OnboardingPage> {
     }
   }
 
-  void _finishOnboarding() {
-    routeTo(AuthPage.path, navigationType: NavigationType.pushAndForgetAll);
+  Future<void> _finishOnboarding() async {
+    String? token = await StorageKeysConfig.bearerToken.read();
+    
+    // Check if user is officially logged in right now
+    if (token != null && token.isNotEmpty) {
+      try {
+        // Fire off the backend call to set completion
+        await ApiService().updateOnboardingStatus(complete: true);
+        // Update our local cache instantly
+        await StorageKeysConfig.onboardingComplete.save(true);
+      } catch (e) {
+        NyLogger.error("Failed to push onboarding status to server: $e");
+      }
+      // Forward to global feed
+      routeTo(FeedPage.path, navigationType: NavigationType.pushAndForgetAll);
+    } else {
+      // Not logged in, standard initial routing to Authentication gateway
+      routeTo(AuthPage.path, navigationType: NavigationType.pushAndForgetAll);
+    }
   }
 
   @override
@@ -154,15 +173,7 @@ class _OnboardingPageState extends NyPage<OnboardingPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        "Ava Qurania",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                      Image(image: AssetImage("assets/images/Icon_text.png"), height: 40,),
                       TextButton(
                         onPressed: _finishOnboarding,
                         child: Text(

@@ -30,13 +30,40 @@ class ApiService extends NyApiService {
     // MyCustomInterceptor: MyCustomInterceptor(),
   };
 
-  /// Example to fetch the Nylo repository info from Github
-  Future<Map<String, dynamic>?> githubInfo() async {
+  /// Authenticate a user and receive token
+  Future<dynamic> loginUser({required String email, required String password}) async {
     return await network(
-      request: (request) =>
-          request.get("https://api.github.com/repos/nylo-core/nylo"),
-      // cacheKey: "github_nylo_info", // Optional: Cache the response
-      // cacheDuration: const Duration(hours: 1),
+      request: (request) => request.post("/auth/login", data: {
+        "email": email,
+        "password": password,
+      }),
+    );
+  }
+
+  /// Register a new user profile
+  Future<dynamic> registerUser({required String email, required String password, String? name}) async {
+    return await network(
+      request: (request) => request.post("/auth/register", data: {
+        "email": email,
+        "password": password,
+        "name": name,
+      }),
+    );
+  }
+
+  /// Get current logged in user profile details
+  Future<dynamic> fetchCurrentUser() async {
+    return await network(
+      request: (request) => request.get("/users/me"),
+    );
+  }
+
+  /// Set server onboarding flag complete
+  Future<dynamic> updateOnboardingStatus({required bool complete}) async {
+    return await network(
+      request: (request) => request.patch("/users/onboarding", data: {
+        "onboardingComplete": complete
+      }),
     );
   }
 
@@ -49,14 +76,14 @@ class ApiService extends NyApiService {
   | Authenticate your API requests using a bearer token or any other method
   |-------------------------------------------------------------------------- */
 
-  // @override
-  // Future<RequestHeaders> setAuthHeaders(RequestHeaders headers) async {
-  //   String? myAuthToken = await StorageKeysConfig.bearerToken.read();
-  //   if (myAuthToken != null) {
-  //     headers.addBearerToken(myAuthToken);
-  //   }
-  //   return headers;
-  // }
+  @override
+  Future<RequestHeaders> setAuthHeaders(RequestHeaders headers) async {
+    String? myAuthToken = await StorageKeysConfig.bearerToken.read();
+    if (myAuthToken != null) {
+      headers.addBearerToken(myAuthToken);
+    }
+    return headers;
+  }
 
   /* Should Refresh Token
   |--------------------------------------------------------------------------

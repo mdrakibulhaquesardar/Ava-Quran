@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/resources/pages/feed_page.dart';
+import '/resources/pages/onboarding_page.dart';
+import '/app/networking/api_service.dart';
+import '/config/storage_keys.dart';
 
 class AuthPage extends NyStatefulWidget {
   static RouteView path = ("/auth", (_) => AuthPage());
@@ -14,6 +17,7 @@ class _AuthPageState extends NyPage<AuthPage> {
   
   bool _obscurePassword = true;
   bool _isLoginMode = true; // Toggles UI between login and signup
+  bool _isLoading = false;
 
   @override
   get init => () {};
@@ -25,6 +29,60 @@ class _AuthPageState extends NyPage<AuthPage> {
     setState(() {
       _isLoginMode = !_isLoginMode;
     });
+  }
+
+  Future<void> _handleAuthSubmit() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      showToastDanger(description: "Please enter all credentials.");
+      return;
+    }
+    
+    if (!_isLoginMode && name.isEmpty) {
+      showToastDanger(description: "Please enter your name.");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      dynamic response;
+      if (_isLoginMode) {
+        response = await ApiService().loginUser(email: email, password: password);
+      } else {
+        response = await ApiService().registerUser(email: email, password: password, name: name);
+      }
+
+      // Verify successful load of token from JSON
+      if (response != null && response['access_token'] != null) {
+        // 1. Save the token for future auto-attaching in ApiService headers
+        await StorageKeysConfig.bearerToken.save(response['access_token']);
+        
+        bool isOnboarded = false;
+        if (response['user'] != null) {
+          await StorageKeysConfig.auth.save(response['user']);
+          isOnboarded = response['user']['onboardingComplete'] == true;
+          await StorageKeysConfig.onboardingComplete.save(isOnboarded);
+        }
+        
+        showToastSuccess(description: _isLoginMode ? "Logged in successfully!" : "Account created!");
+        
+        // Navigate intelligently based on state
+        final nextRoute = isOnboarded ? FeedPage.path : OnboardingPage.path;
+        
+        routeTo(nextRoute, navigationType: NavigationType.pushAndRemoveUntil, removeUntilPredicate: (route) => false);
+      } else {
+        showToastWarning(description: "Could not process login. Try again.");
+      }
+    } catch (e) {
+      // Specific network exceptions caught by Nylo network() bubble here
+      showToastDanger(description: "Connection failed. Check credentials.");
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -177,9 +235,7 @@ class _AuthPageState extends NyPage<AuthPage> {
                                 ],
                               ),
                               child: ElevatedButton(
-                                onPressed: () {
-                                  routeTo(FeedPage.path);
-                                },
+                                onPressed: _isLoading ? null : _handleAuthSubmit,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF267B92),
                                   foregroundColor: Colors.white,
@@ -188,18 +244,27 @@ class _AuthPageState extends NyPage<AuthPage> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: Text(
-                                    _isLoginMode ? "Login" : "Sign Up",
-                                    key: ValueKey(_isLoginMode),
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2.5,
+                                        ),
+                                      )
+                                    : AnimatedSwitcher(
+                                        duration: const Duration(milliseconds: 200),
+                                        child: Text(
+                                          _isLoginMode ? "Login" : "Sign Up",
+                                          key: ValueKey(_isLoginMode),
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.8,
+                                          ),
+                                        ),
+                                      ),
                               ),
                             ),
                           ),

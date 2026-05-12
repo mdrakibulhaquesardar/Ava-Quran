@@ -16,10 +16,11 @@ class Main extends StatefulWidget {
   Main(
     Nylo nylo, {
     super.key,
+    String? overrideInitialRoute,
   })  : onGenerateRoute = nylo.router!.generator(),
         onUnknownRoute = nylo.router!.unknownRoute(),
         navigatorKey = NyNavigator.instance.router.navigatorKey,
-        initialRoute = nylo.getInitialRoute(),
+        initialRoute = overrideInitialRoute ?? nylo.getInitialRoute(),
         navigatorObservers = nylo.getNavigatorObservers(),
         nylo = nylo,
         themeMode = ThemeMode.system;

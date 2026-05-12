@@ -137,76 +137,129 @@ class _ToastNotificationBase extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color accentColor = _toastMeta.color ?? const Color(0xFF267B92);
+    final isDark = context.isThemeDark;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       child: Material(
         color: Colors.transparent,
         child: Container(
-          height: 95,
           decoration: BoxDecoration(
-            color: context.color.general.background,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: context.isThemeDark
-                ? null
-                : [
-                    BoxShadow(
-                      color: Colors.grey.withAlpha(25),
-                      spreadRadius: 3,
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
+            color: isDark ? const Color(0xFF1C252A) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 60 : 15),
+                blurRadius: 24,
+                spreadRadius: 0,
+                offset: const Offset(0, 8),
+              )
+            ],
+            border: Border.all(
+              color: isDark ? Colors.white.withAlpha(15) : Colors.grey.shade200,
+              width: 1,
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: InkWell(
+              onTap: _toastMeta.action != null ? () => _toastMeta.action!() : null,
+              child: IntrinsicHeight(
+                child: Row(
+                  children: [
+                    // Left aesthetic accent bar
+                    Container(
+                      width: 6,
+                      decoration: BoxDecoration(
+                        color: accentColor,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(20),
+                          bottomLeft: Radius.circular(20),
+                        ),
+                      ),
+                    ),
+                    
+                    // Icon section with soft aura
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 4),
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: accentColor.withAlpha(isDark ? 40 : 25),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: IconTheme(
+                            data: IconThemeData(
+                              color: accentColor,
+                              size: 20,
+                            ),
+                            child: _toastMeta.icon ?? const Icon(Icons.info_rounded),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Content section
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _toastMeta.title.tr(),
+                              style: TextStyle(
+                                color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                            if (_toastMeta.description.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                _toastMeta.description,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: isDark ? Colors.white70 : Colors.black54,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Dismiss button
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: _toastMeta.dismiss != null ? () => _toastMeta.dismiss!() : null,
+                          child: Padding(
+                            padding: const EdgeInsets.all(6),
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: isDark ? Colors.white38 : Colors.black26,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
-          ),
-          child: InkWell(
-            onTap: _toastMeta.action != null
-                ? () => _toastMeta.action!()
-                : null,
-            borderRadius: BorderRadius.circular(16),
-            child: Row(
-              children: [
-                // Icon section
-                SizedBox(width: 50, child: Center(child: _toastMeta.icon)),
-                // Content section
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_toastMeta.title.tr()).bodyLarge(
-                          color: context.color.general.content,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        if (_toastMeta.description.isNotEmpty)
-                          Text(
-                            _toastMeta.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ).bodyMedium(
-                            color: context.color.general.content.withAlpha(200),
-                          ),
-                      ],
-                    ),
-                  ),
                 ),
-                // Dismiss button
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: IconButton(
-                    onPressed: _toastMeta.dismiss != null
-                        ? () => _toastMeta.dismiss!()
-                        : null,
-                    icon: Icon(
-                      Icons.close,
-                      size: 18,
-                      color: context.isThemeDark
-                          ? Colors.white70
-                          : Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),

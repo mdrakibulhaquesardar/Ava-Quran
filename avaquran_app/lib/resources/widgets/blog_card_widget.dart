@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import '/resources/pages/blog_details_page.dart';
 
 class BlogCard extends StatefulWidget {
   final String title;
@@ -27,7 +28,15 @@ class _BlogCardState extends NyState<BlogCard> {
 
   @override
   Widget view(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () => routeTo(BlogDetailsPage.path, data: {
+        'title': widget.title,
+        'author': widget.author,
+        'date': widget.date,
+        'image': widget.image,
+        'category': widget.category,
+      }),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -126,6 +135,7 @@ class _BlogCardState extends NyState<BlogCard> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
