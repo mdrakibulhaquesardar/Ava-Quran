@@ -79,6 +79,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        avatar: user.avatar,
       },
     };
   }
@@ -174,12 +175,19 @@ export class AuthService {
       );
 
       const quranProfile = userRes.data;
+      console.log('[OAuth] Quran.Foundation userinfo payload fetched:', quranProfile);
+      
       const quranId = String(quranProfile.sub || quranProfile.id);
       const email = quranProfile.email;
 
       if (!quranId) {
         throw new UnauthorizedException('Invalid profile returned from provider.');
       }
+
+      // Extract or derive a proper fallback name and avatar
+      const rawName = quranProfile.name || quranProfile.display_name || quranProfile.preferred_username;
+      const derivedName = rawName || (email ? email.split('@')[0] : 'Ava User');
+      const avatar = quranProfile.picture || quranProfile.avatar_url;
 
       // Build update payload for tokens
       const tokenData = {
@@ -194,7 +202,23 @@ export class AuthService {
         // If state passed contains a user ID, we are explicitly linking an existing logged in account
         user = await this.usersService.findOneById(state);
         if (user) {
-          user = await this.usersService.updateUser(user.id, { quranId, ...tokenData });
+          // Ensure database schema integrity: if this quranId is already tied to another Ava account,
+          // we safely UNLINK it from the old account first, then bind it to the new one.
+          const conflictUser = await this.usersService.findOneByQuranId(quranId);
+          if (conflictUser && conflictUser.id !== user.id) {
+             await this.usersService.updateUser(conflictUser.id, { 
+               quranId: null,
+               quranAccessToken: null,
+               quranRefreshToken: null,
+               quranTokenExpiresAt: null
+             });
+          }
+
+          const updatePayload: any = { quranId, ...tokenData };
+          if (!user.name && derivedName) updatePayload.name = derivedName;
+          if (!user.avatar && avatar) updatePayload.avatar = avatar;
+
+          user = await this.usersService.updateUser(user.id, updatePayload);
           return await this.generateToken(user);
         }
       }
@@ -205,21 +229,29 @@ export class AuthService {
         user = await this.usersService.findOneByEmail(email);
         if (user) {
           // Auto-link if matching emails
-          user = await this.usersService.updateUser(user.id, { quranId, ...tokenData });
+          const updatePayload: any = { quranId, ...tokenData };
+          if (!user.name && derivedName) updatePayload.name = derivedName;
+          if (!user.avatar && avatar) updatePayload.avatar = avatar;
+
+          user = await this.usersService.updateUser(user.id, updatePayload);
           return await this.generateToken(user);
         }
       }
 
       if (user) {
-        // Just cache newest tokens on existing user
-        user = await this.usersService.updateUser(user.id, tokenData);
+        // Cache newest tokens on existing user and sync basic info if missing
+        const updatePayload: any = { ...tokenData };
+        if (!user.name && derivedName) updatePayload.name = derivedName;
+        if (!user.avatar && avatar) updatePayload.avatar = avatar;
+
+        user = await this.usersService.updateUser(user.id, updatePayload);
       } else {
         // New creation
         user = await this.usersService.createUser({
           email: email || `${quranId}@quran.foundation`,
           quranId,
-          name: quranProfile.name,
-          avatar: quranProfile.picture || quranProfile.avatar_url,
+          name: derivedName,
+          avatar: avatar,
           ...tokenData,
         });
       }
