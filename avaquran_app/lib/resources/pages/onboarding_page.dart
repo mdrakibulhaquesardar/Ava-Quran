@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import '/resources/pages/auth_page.dart';
 import '/resources/pages/home_page.dart';
 
 class OnboardingPage extends NyStatefulWidget {
@@ -39,7 +40,7 @@ class _OnboardingPageState extends NyPage<OnboardingPage> {
   void _goToNextPage() {
     if (_currentPage < _slides.length - 1) {
       _pageController.nextPage(
-          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+          duration: const Duration(milliseconds: 400), curve: Curves.easeInOutCubic);
     } else {
       _finishOnboarding();
     }
@@ -48,101 +49,142 @@ class _OnboardingPageState extends NyPage<OnboardingPage> {
   void _goToPrevPage() {
     if (_currentPage > 0) {
       _pageController.previousPage(
-          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+          duration: const Duration(milliseconds: 400), curve: Curves.easeInOutCubic);
     }
   }
 
   void _finishOnboarding() {
-    routeTo(HomePage.path, navigationType: NavigationType.pushAndRemoveUntil);
+    routeTo(AuthPage.path, navigationType: NavigationType.pushAndForgetAll);
   }
 
   @override
   Widget view(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0A2A3A),
-              Color(0xFF03141C),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // TOP APP BAR SECTION
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Stack(
+        children: [
+          // 1. MAIN SWIPEABLE CONTENT (Background Image + Swiping Text)
+          Positioned.fill(
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentPage = index;
+                });
+              },
+              itemCount: _slides.length,
+              itemBuilder: (context, index) {
+                final slide = _slides[index];
+                return Stack(
                   children: [
-                    const Text(
-                      "Qurania",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
+                    // FULL SCREEN BACKGROUND IMAGE
+                    Positioned.fill(
+                      child: Image.asset(
+                        slide["image"]!,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                    TextButton(
-                      onPressed: _finishOnboarding,
-                      child: Text(
-                        "Skip",
-                        style: TextStyle(
-                          color: Colors.white.withAlpha(204),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+                    
+                    // GRADIENT OVERLAY (Fades from top clear to deep dark bottom for text)
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            stops: const [0.0, 0.5, 0.8, 1.0],
+                            colors: [
+                              Colors.black.withAlpha(60), // Slight top dark for clock/bar
+                              Colors.transparent,
+                              const Color(0xFF03141C).withAlpha(180), // Dark gradient starts before text
+                              const Color(0xFF03141C),               // Deep bottom
+                            ],
+                          ),
                         ),
                       ),
-                    )
+                    ),
+
+                    // PAGE SPECIFIC SWIPING TEXT
+                    Positioned.fill(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                slide["title"]!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.8,
+                                  height: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                slide["desc"]!,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white.withAlpha(160),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
-                ),
-              ),
+                );
+              },
+            ),
+          ),
 
-              // SLIDES SECTION
-              Expanded(
-                flex: 6,
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
-                  itemCount: _slides.length,
-                  itemBuilder: (context, index) {
-                    return Container(
-                      margin: const EdgeInsets.all(24.0),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        image: DecorationImage(
-                          image: AssetImage(_slides[index]["image"]!),
-                          fit: BoxFit.cover,
+          // 2. STATIC OVERLAY CONTROLS (Top & Bottom Safe UI)
+          SafeArea(
+            child: Column(
+              children: [
+                // TOP BAR (STATIC)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Ava Qurania",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(76),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          )
-                        ],
                       ),
-                    );
-                  },
+                      TextButton(
+                        onPressed: _finishOnboarding,
+                        child: Text(
+                          "Skip",
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(204),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
                 ),
-              ),
 
-              // BOTTOM CONTENT SECTION
-              Expanded(
-                flex: 4,
-                child: Container(
+                const Spacer(),
+
+                // BOTTOM NAVIGATION SECTION (STATIC)
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32.0),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       // Page Indicator Dots
                       Row(
@@ -165,61 +207,37 @@ class _OnboardingPageState extends NyPage<OnboardingPage> {
                       ),
                       const SizedBox(height: 32),
 
-                      // Title
-                      Text(
-                        _slides[_currentPage]["title"]!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.8,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Subtitle Description
-                      Text(
-                        _slides[_currentPage]["desc"]!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.white.withAlpha(160),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          height: 1.5,
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      // Bottom Controls
+                      // Button Row
                       Row(
                         children: [
-                          // Back button (only show after first slide)
-                          if (_currentPage > 0)
-                            GestureDetector(
-                              onTap: _goToPrevPage,
-                              child: Container(
-                                height: 56,
-                                width: 56,
-                                margin: const EdgeInsets.only(right: 16),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withAlpha(26),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white.withAlpha(40),
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.keyboard_arrow_left,
-                                  color: Colors.white,
-                                  size: 28,
-                                ),
-                              ),
-                            ),
+                          // Back Button Animated In/Out
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 200),
+                            child: _currentPage > 0
+                                ? GestureDetector(
+                                    onTap: _goToPrevPage,
+                                    child: Container(
+                                      height: 56,
+                                      width: 56,
+                                      margin: const EdgeInsets.only(right: 16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withAlpha(26),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.white.withAlpha(40),
+                                        ),
+                                      ),
+                                      child: const Icon(
+                                        Icons.keyboard_arrow_left,
+                                        color: Colors.white,
+                                        size: 28,
+                                      ),
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
 
-                          // Primary Action Button
+                          // Primary Expanded Button
                           Expanded(
                             child: SizedBox(
                               height: 56,
@@ -233,14 +251,18 @@ class _OnboardingPageState extends NyPage<OnboardingPage> {
                                     borderRadius: BorderRadius.circular(28),
                                   ),
                                 ),
-                                child: Text(
-                                  _currentPage == _slides.length - 1
-                                      ? "Get Started"
-                                      : "Next",
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Text(
+                                    _currentPage == _slides.length - 1
+                                        ? "Get Started"
+                                        : "Next",
+                                    key: ValueKey(_currentPage == _slides.length - 1),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -252,10 +274,10 @@ class _OnboardingPageState extends NyPage<OnboardingPage> {
                     ],
                   ),
                 ),
-              )
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

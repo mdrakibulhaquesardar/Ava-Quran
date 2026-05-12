@@ -1,3 +1,4 @@
+import '/resources/pages/auth_page.dart';
 import '/resources/pages/onboarding_page.dart';
 import '/resources/pages/not_found_page.dart';
 import '/resources/pages/home_page.dart';
@@ -16,4 +17,5 @@ appRouter() => nyRoutes((router) {
 
       router.add(NotFoundPage.path).unknownRoute();
       router.add(OnboardingPage.path).initialRoute();
+      router.add(AuthPage.path);
 });
