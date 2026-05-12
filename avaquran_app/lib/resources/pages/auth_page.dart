@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import '/resources/pages/feed_page.dart';
 
 class AuthPage extends NyStatefulWidget {
   static RouteView path = ("/auth", (_) => AuthPage());
@@ -177,7 +178,7 @@ class _AuthPageState extends NyPage<AuthPage> {
                               ),
                               child: ElevatedButton(
                                 onPressed: () {
-                                  // Login logic unimplemented for now
+                                  routeTo(FeedPage.path);
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF267B92),

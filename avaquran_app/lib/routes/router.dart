@@ -1,3 +1,7 @@
+import '/resources/pages/blogs_page.dart';
+import '/resources/pages/videos_page.dart';
+import '/resources/pages/peoples_page.dart';
+import '/resources/pages/feed_page.dart';
 import '/resources/pages/auth_page.dart';
 import '/resources/pages/onboarding_page.dart';
 import '/resources/pages/not_found_page.dart';
@@ -18,4 +22,8 @@ appRouter() => nyRoutes((router) {
       router.add(NotFoundPage.path).unknownRoute();
       router.add(OnboardingPage.path).initialRoute();
       router.add(AuthPage.path);
+      router.add(FeedPage.path);
+      router.add(PeoplesPage.path);
+      router.add(VideosPage.path);
+      router.add(BlogsPage.path);
 });
