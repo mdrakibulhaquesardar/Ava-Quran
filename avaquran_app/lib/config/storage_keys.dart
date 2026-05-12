@@ -15,6 +15,7 @@ final class StorageKeysConfig {
         return [
           auth,
           bearerToken,
+          refreshToken,
           onboardingComplete,
           // coins.defaultValue(10), // give the user 10 coins by default
         ];
@@ -23,6 +24,8 @@ final class StorageKeysConfig {
   static final StorageKey auth = 'SK_USER';
 
   static final StorageKey bearerToken = 'SK_BEARER_TOKEN';
+  
+  static final StorageKey refreshToken = 'SK_REFRESH_TOKEN';
   
   static final StorageKey onboardingComplete = 'SK_ONBOARDING_COMPLETE';
 

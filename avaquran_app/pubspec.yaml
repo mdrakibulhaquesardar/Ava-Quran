@@ -30,6 +30,7 @@ dependencies:
   audioplayers: ^6.6.0
   multiavatar: ^0.1.5
   flutter_svg: ^2.3.0
+  webview_flutter: ^4.13.1
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4

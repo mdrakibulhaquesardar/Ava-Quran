@@ -31,14 +31,16 @@ class Boot {
           String? activeToken = await StorageKeysConfig.bearerToken.read();
           if (activeToken != null && activeToken.isNotEmpty) {
             try {
-              dynamic profile = await ApiService().fetchCurrentUser();
+              // Explicitly pass activeToken to overcome intermittent race conditions during initial boot interception sync
+              dynamic profile = await ApiService().fetchCurrentUser(bearerToken: activeToken);
               if (profile != null) {
-                // Save full fresh user config to local storage
-                await StorageKeysConfig.auth.save(profile);
+                // Inject current bearer into synchronized record for consistent interceptor access
+                final Map<String, dynamic> userMap = Map<String, dynamic>.from(profile);
+                userMap['access_token'] = activeToken;
                 
-                // Persist canonical onboarding flag
-                bool complete = profile['onboardingComplete'] ?? false;
-                await StorageKeysConfig.onboardingComplete.save(complete);
+                // Fully synchronize the newly verified cache with Nylo's dynamic Auth layer
+                await Auth.authenticate(data: userMap);
+                // NOTE: We no longer sync onboardingComplete from server as it is strictly local-only per requirements
               }
             } catch (e) {
               NyLogger.error("Boot state sync failed: $e");
@@ -48,9 +50,8 @@ class Boot {
           // 2. COMPUTE DYNAMIC INITIAL ROUTE FOR ENTRY
           String? startRoute;
           if (activeToken != null && activeToken.isNotEmpty) {
-             bool hasOnboarded = (await StorageKeysConfig.onboardingComplete.read()) == true;
-             // If user is logged in but hasn't onboarded, guide to Onboarding, else go directly to Feed
-             startRoute = hasOnboarded ? FeedPage.path.$1 : OnboardingPage.path.$1;
+             // PER USER DIRECTIVE: If user is logged in, bypass ALL checks and send directly to the Feed
+             startRoute = FeedPage.path.$1;
           }
           
           await bootFinished(nylo, providers);

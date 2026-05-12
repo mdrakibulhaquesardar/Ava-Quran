@@ -56,22 +56,16 @@ class _OnboardingPageState extends NyPage<OnboardingPage> {
   }
 
   Future<void> _finishOnboarding() async {
+    // 1. Set localized tracking vector instantly to break the re-rendering chain eternally on this device
+    await StorageKeysConfig.onboardingComplete.save(true);
+
     String? token = await StorageKeysConfig.bearerToken.read();
     
-    // Check if user is officially logged in right now
     if (token != null && token.isNotEmpty) {
-      try {
-        // Fire off the backend call to set completion
-        await ApiService().updateOnboardingStatus(complete: true);
-        // Update our local cache instantly
-        await StorageKeysConfig.onboardingComplete.save(true);
-      } catch (e) {
-        NyLogger.error("Failed to push onboarding status to server: $e");
-      }
-      // Forward to global feed
+      // Logged in user finishes onboarding locally and enters app instantly
       routeTo(FeedPage.path, navigationType: NavigationType.pushAndForgetAll);
     } else {
-      // Not logged in, standard initial routing to Authentication gateway
+      // Anonymous user finishes onboarding and is routed to authorization gate
       routeTo(AuthPage.path, navigationType: NavigationType.pushAndForgetAll);
     }
   }

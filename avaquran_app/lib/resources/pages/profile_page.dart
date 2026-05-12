@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:multiavatar/multiavatar.dart';
+import '/resources/pages/quran_auth_page.dart';
+import '/resources/pages/auth_page.dart';
+import '/app/networking/api_service.dart';
+import '/config/storage_keys.dart';
 
 class ProfilePage extends NyStatefulWidget {
   static RouteView path = ("/profile", (_) => ProfilePage());
@@ -10,11 +15,36 @@ class ProfilePage extends NyStatefulWidget {
 }
 
 class _ProfilePageState extends NyPage<ProfilePage> {
+  dynamic _user;
+
   @override
-  get init => () {};
+  get init => () {
+    _user = _safeAuthData();
+  };
+
+  /// Safely resolve dynamic cache state even if returned as encoded serialized JSON
+  dynamic _safeAuthData() {
+    final dynamic rawData = Auth.data();
+    if (rawData == null) return null;
+    if (rawData is String && rawData.trim().startsWith("{")) {
+      try {
+         return jsonDecode(rawData);
+      } catch (e) {
+         return rawData; // Failback
+      }
+    }
+    return rawData;
+  }
 
   @override
   Widget view(BuildContext context) {
+    // ULTIMATE SHIELD: Safely extract properties into scope variables to guarantee 0% crash risk
+    final bool isValidMap = _user != null && _user is Map;
+    final String userName = isValidMap ? (_user['name'] ?? "Ava User") : "Ava User";
+    final String userEmail = isValidMap ? (_user['email'] ?? "No email available") : "No email available";
+    final dynamic userQuranId = isValidMap ? _user['quranId'] : null;
+    final String avatarSeed = isValidMap ? (_user['name'] ?? _user['email'] ?? "Unknown User") : "Unknown User";
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FBFA), // Premium soft offwhite
       body: Stack(
@@ -107,7 +137,7 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(100),
                         child: SvgPicture.string(
-                          multiavatar("Khunais ibn Nirob"),
+                          multiavatar(avatarSeed),
                           height: 90,
                           width: 90,
                           fit: BoxFit.cover,
@@ -118,34 +148,37 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                   const SizedBox(height: 16),
                   
                   // Username & Badge
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        "Khunais ibn Hudhafa",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black87,
-                          letterSpacing: -0.5,
+                      Flexible(
+                        child: Text(
+                          userName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black87,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ),
-                      SizedBox(width: 6),
-                      Icon(Icons.verified_rounded, color: Color(0xFF267B92), size: 20),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.verified_rounded, color: Color(0xFF267B92), size: 20),
                     ],
                   ),
                   const SizedBox(height: 10),
 
                   // Bio
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(
-                      "Dr Zakir Naik's Official Account Managed & Maintained by Islamic Research Foundation (IRF). Please Visit : www.irf.net",
+                      userEmail,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 13,
                         color: Colors.black54,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         height: 1.4,
                       ),
                     ),
@@ -167,7 +200,83 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                     ),
                   ),
                   
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 24),
+                  
+                  // CONDITIONAL QURAN FOUNDATION BANNER
+                  if (userQuranId == null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF267B92), Color(0xFF1E6174)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF267B92).withAlpha(80),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(40),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.cloud_sync_rounded, color: Colors.white, size: 24),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [
+                                  Text(
+                                    "Enable Cloud Sync",
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    "Connect your Quran.Foundation profile",
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: _triggerAccountLinking,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFF267B92),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text("Link", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                  const SizedBox(height: 16),
 
                   // SETTINGS / ACTION LIST
                   Padding(
@@ -237,7 +346,7 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () {},
+                        onTap: _handleLogout,
                         borderRadius: BorderRadius.circular(24),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
@@ -378,5 +487,45 @@ class _ProfilePageState extends NyPage<ProfilePage> {
         ),
       ),
     );
+  }
+
+  /// Navigates to QuranAuthPage in link-mode and reloads profile data on success
+  Future<void> _triggerAccountLinking() async {
+    final bool? result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuranAuthPage(),
+        settings: const RouteSettings(arguments: {"isLinking": true}),
+      ),
+    );
+    
+    if (result == true) {
+      // The user successfully connected and QuranAuthPage saved updated user to Auth storage.
+      // Force local state re-hydration to render dynamic UI correctly.
+      setState(() {
+        _user = _safeAuthData();
+      });
+    }
+  }
+
+  /// Invalidate both server session and local device cache completely
+  Future<void> _handleLogout() async {
+    try {
+      // 1. Dispatch backend invalidation packet (silent attempt)
+      await ApiService().logoutUser();
+    } catch (e) {
+      NyLogger.error("Remote logout sync failed: $e");
+    }
+
+    // 2. Clear secured persistence slots on device
+    await StorageKeysConfig.bearerToken.save(null);
+    await StorageKeysConfig.refreshToken.save(null);
+    
+    // 3. Inform framework auth module
+    await Auth.logout();
+    
+    // 4. Completely purge memory tree and return to Auth
+    routeTo(AuthPage.path, navigationType: NavigationType.pushAndForgetAll);
+    showToastInfo(description: "You've been safely signed out.");
   }
 }

@@ -1,3 +1,4 @@
+import '/resources/pages/quran_auth_page.dart';
 import '/resources/pages/blog_details_page.dart';
 import '/resources/pages/profile_page.dart';
 import '/resources/pages/video_feed_page.dart';
@@ -32,4 +33,5 @@ appRouter() => nyRoutes((router) {
       router.add(VideoFeedPage.path);
       router.add(ProfilePage.path);
       router.add(BlogDetailsPage.path);
+      router.add(QuranAuthPage.path);
 });

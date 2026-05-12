@@ -46,12 +46,11 @@ export class AuthController {
   @ApiOperation({ summary: 'Redirect user to Quran.Foundation login' })
   @ApiQuery({ name: 'redirectUri', required: false, description: 'Custom frontend redirect URL after successful OAuth' })
   @Get('quran/login')
-  quranLogin(@Query('redirectUri') queryRedirect: string, @Res() res: Response) {
-    // In real world, the backend constructs URL and returns it or redirects.
-    // Let's accept a redirectUri param for where the provider should send code back (our backend callback or directly).
-    // Standard pattern: user clicks -> hits backend -> backend redirects to provider.
-    // Callback URI MUST match one registered in provider portal.
-    const fallback = 'http://localhost:3000/auth/quran/callback';
+  quranLogin(@Req() req: any, @Query('redirectUri') queryRedirect: string, @Res() res: Response) {
+    const protocol = req.protocol;
+    const host = req.get('Host');
+    const fallback = `${protocol}://${host}/auth/quran/callback`;
+    
     const url = this.authService.getQuranOAuthUrl(queryRedirect || fallback);
     res.redirect(url);
   }
@@ -63,7 +62,10 @@ export class AuthController {
   @Get('quran/link')
   quranLink(@Req() req: any, @Query('redirectUri') queryRedirect: string, @Res() res: Response) {
     const userId = req.user.userId;
-    const fallback = 'http://localhost:3000/auth/quran/callback';
+    const protocol = req.protocol;
+    const host = req.get('Host');
+    const fallback = `${protocol}://${host}/auth/quran/callback`;
+
     // Pass userId in state so callback knows to link to THIS user instead of new creation
     const url = this.authService.getQuranOAuthUrl(queryRedirect || fallback, userId);
     res.redirect(url);

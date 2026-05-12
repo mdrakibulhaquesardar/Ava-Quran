@@ -1,4 +1,6 @@
+import 'dart:convert';
 import '/config/storage_keys.dart';
+import '/config/app.dart';
 import '/bootstrap/decoders.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
@@ -52,9 +54,11 @@ class ApiService extends NyApiService {
   }
 
   /// Get current logged in user profile details
-  Future<dynamic> fetchCurrentUser() async {
+  Future<dynamic> fetchCurrentUser({String? bearerToken}) async {
     return await network(
-      request: (request) => request.get("/users/me"),
+      request: (request) => request.get("/users/me", options: Options(headers: {
+        if (bearerToken != null) "Authorization": "Bearer $bearerToken"
+      })),
     );
   }
 
@@ -64,6 +68,29 @@ class ApiService extends NyApiService {
       request: (request) => request.patch("/users/onboarding", data: {
         "onboardingComplete": complete
       }),
+    );
+  }
+
+  /// Refresh an expired access token using durable refresh token
+  Future<dynamic> refreshSessionToken({required String refreshToken}) async {
+    return await network(
+      request: (request) => request.post("/auth/refresh", data: {
+        "refreshToken": refreshToken
+      }),
+    );
+  }
+
+  /// Invalidates session on server and discards active tokens
+  Future<dynamic> logoutUser() async {
+    return await network(
+      request: (request) => request.post("/auth/logout"),
+    );
+  }
+
+  /// Get current logged in JWT user object (Debug Profile)
+  Future<dynamic> fetchTestingProfile() async {
+    return await network(
+      request: (request) => request.get("/auth/profile"),
     );
   }
 
@@ -91,22 +118,58 @@ class ApiService extends NyApiService {
   | Set `false` if your API does not require a token refresh
   |-------------------------------------------------------------------------- */
 
-  // @override
-  // Future<bool> shouldRefreshToken() async {
-  //   return false;
-  // }
+  @override
+  Future<bool> shouldRefreshToken() async {
+    // Verify we possess a resident refresh token to attempt restoration
+    String? refresh = await StorageKeysConfig.refreshToken.read();
+    return refresh != null && refresh.isNotEmpty;
+  }
 
-  /* Refresh Token
-  |--------------------------------------------------------------------------
-  | If `shouldRefreshToken` returns true then this method
-  | will be called to refresh your token. Save your new token to
-  | local storage and then use the value in `setAuthHeaders`.
-  |-------------------------------------------------------------------------- */
+  @override
+  refreshToken(Dio dio) async {
+    String? rToken = await StorageKeysConfig.refreshToken.read();
+    if (rToken == null) return;
 
-  // @override
-  // refreshToken(Dio dio) async {
-  //  dynamic response = (await dio.get("https://example.com/refresh-token")).data;
-  //  // Save the new token
-  //   await StorageKeysConfig.bearerToken.save(response['token']);
-  // }
+    try {
+      // Request fresh lease using localized refresh carrier with absolute base URI
+      final Response response = await dio.post("${AppConfig.apiBaseUrl}/auth/refresh", data: {
+        "refreshToken": rToken
+      });
+
+      if (response.statusCode != null && (response.statusCode! >= 200 && response.statusCode! < 300)) {
+        final dynamic data = response.data;
+        if (data != null && data['access_token'] != null) {
+          // Persist fresh short-term execution lock
+          await StorageKeysConfig.bearerToken.save(data['access_token']);
+          
+          // Commit fresh long-term refresh vector if server rotated
+          if (data['refresh_token'] != null) {
+            await StorageKeysConfig.refreshToken.save(data['refresh_token']);
+          }
+          
+          // 3. Atomically refresh transient internal user descriptor cache for immediate synchronous interceptor reuse
+          dynamic existingAuth = Auth.data();
+          
+          // ELASTIC RECOVERY: In case it is string-encoded in memory
+          if (existingAuth is String && existingAuth.trim().startsWith("{")) {
+             try { existingAuth = jsonDecode(existingAuth); } catch(e) {}
+          }
+
+          if (existingAuth != null && existingAuth is Map) {
+            final Map<String, dynamic> updatedAuth = Map<String, dynamic>.from(existingAuth);
+            updatedAuth['access_token'] = data['access_token'];
+            // Re-synchronize the refreshed token into framework-managed memory
+            await Auth.authenticate(data: updatedAuth);
+          }
+
+          NyLogger.debug("Silent Auth Recovery Complete: Token pair synchronized!");
+        }
+      }
+    } catch (e) {
+      NyLogger.error("Autonomous token cycle failed. Purging credentials: $e");
+      // Clear compromised or rejected chain
+      await StorageKeysConfig.bearerToken.save(null);
+      await StorageKeysConfig.refreshToken.save(null);
+    }
+  }
 }

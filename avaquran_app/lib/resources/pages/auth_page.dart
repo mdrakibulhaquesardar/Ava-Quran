@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/resources/pages/feed_page.dart';
 import '/resources/pages/onboarding_page.dart';
+import '/resources/pages/quran_auth_page.dart';
 import '/app/networking/api_service.dart';
 import '/config/storage_keys.dart';
 
@@ -58,22 +59,33 @@ class _AuthPageState extends NyPage<AuthPage> {
 
       // Verify successful load of token from JSON
       if (response != null && response['access_token'] != null) {
-        // 1. Save the token for future auto-attaching in ApiService headers
+        // 1. Save the tokens for future auto-attaching and manual rotation
         await StorageKeysConfig.bearerToken.save(response['access_token']);
         
-        bool isOnboarded = false;
-        if (response['user'] != null) {
-          await StorageKeysConfig.auth.save(response['user']);
-          isOnboarded = response['user']['onboardingComplete'] == true;
-          await StorageKeysConfig.onboardingComplete.save(isOnboarded);
+        if (response['refresh_token'] != null) {
+          await StorageKeysConfig.refreshToken.save(response['refresh_token']);
         }
         
+        // 2. Immediately request full canonical profile to prime local cache state (name, email, etc.)
+        dynamic fullUser;
+        try {
+           // Proactively pass the newly received token to instantly Prime the local profile cache safely
+           fullUser = await ApiService().fetchCurrentUser(bearerToken: response['access_token']);
+        } catch (e) {
+           NyLogger.error("Initial verification profile prime failed: $e");
+        }
+
+        // Preserve execution token inside in-memory mapped user representation
+        final Map<String, dynamic> finalUserMap = Map<String, dynamic>.from(fullUser ?? response['user'] ?? {});
+        finalUserMap['access_token'] = response['access_token'];
+        // Commit the user data into framework-managed Auth ecosystem (this updates Auth.data() instantly)
+        await Auth.authenticate(data: finalUserMap);
+        
+        // 3. PER USER DIRECTIVE: Upon logging in, we bypass ALL onboarding checks and drive directly into the Feed
         showToastSuccess(description: _isLoginMode ? "Logged in successfully!" : "Account created!");
         
-        // Navigate intelligently based on state
-        final nextRoute = isOnboarded ? FeedPage.path : OnboardingPage.path;
-        
-        routeTo(nextRoute, navigationType: NavigationType.pushAndRemoveUntil, removeUntilPredicate: (route) => false);
+        // Strict redirection protocol: User is logged in -> go to Feed
+        routeTo(FeedPage.path, navigationType: NavigationType.pushAndRemoveUntil, removeUntilPredicate: (route) => false);
       } else {
         showToastWarning(description: "Could not process login. Try again.");
       }
@@ -269,7 +281,41 @@ class _AuthPageState extends NyPage<AuthPage> {
                             ),
                           ),
 
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 24),
+
+                          // OR SEPARATOR
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: Colors.white.withAlpha(40))),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Text("OR", style: TextStyle(color: Colors.white.withAlpha(150), fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                              ),
+                              Expanded(child: Divider(color: Colors.white.withAlpha(40))),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // QURAN FOUNDATION DYNAMIC LOGIN
+                          SizedBox(
+                            height: 54,
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _isLoading ? null : () => routeTo(QuranAuthPage.path),
+                              icon: const Icon(Icons.account_balance_wallet_outlined, size: 20, color: Colors.white),
+                              label: const Text("Sign In with Quran.Foundation", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.3)),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.white.withAlpha(50), width: 1),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                backgroundColor: Colors.white.withAlpha(15),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 32),
 
                           // BOTTOM ALTERNATIVE ACTION ROW
                           Row(

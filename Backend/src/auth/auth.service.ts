@@ -122,13 +122,13 @@ export class AuthService {
       client_id: clientId || '',
       redirect_uri: redirectUri,
       response_type: 'code',
-      scope: 'openid profile email',
+      scope: 'openid offline_access',
     };
     if (state) {
       query.state = state;
     }
     const q = new URLSearchParams(query);
-    return `${baseUrl}/oauth/authorize?${q.toString()}`;
+    return `${baseUrl}/oauth2/auth?${q.toString()}`;
   }
 
   async handleQuranCallback(code: string, redirectUri: string, state?: string) {
@@ -139,7 +139,7 @@ export class AuthService {
     try {
       // 1. Exchange code for token
       const tokenRes = await firstValueFrom(
-        this.httpService.post(`${baseUrl}/oauth/token`, {
+        this.httpService.post(`${baseUrl}/oauth2/token`, {
           grant_type: 'authorization_code',
           code,
           redirect_uri: redirectUri,
@@ -153,7 +153,7 @@ export class AuthService {
 
       // 2. Get user info
       const userRes = await firstValueFrom(
-        this.httpService.get(`${baseUrl}/oauth/userinfo`, {
+        this.httpService.get(`${baseUrl}/userinfo`, {
           headers: { Authorization: `Bearer ${access_token}` },
         }),
       );
@@ -226,7 +226,7 @@ export class AuthService {
 
     try {
       const tokenRes = await firstValueFrom(
-        this.httpService.post(`${baseUrl}/oauth/token`, {
+        this.httpService.post(`${baseUrl}/oauth2/token`, {
           grant_type: 'refresh_token',
           refresh_token: user.quranRefreshToken,
           client_id: clientId,
