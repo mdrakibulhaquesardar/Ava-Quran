@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/resources/widgets/trend_video_card_widget.dart';
+import '/resources/widgets/blog_card_widget.dart';
 
 class FeedPage extends NyStatefulWidget {
   static RouteView path = ("/feed", (_) => FeedPage());
@@ -22,32 +23,36 @@ class _FeedPageState extends NyPage<FeedPage> {
   // BRAND COLOR
   final Color _brandAccent = const Color(0xFF267B92);
 
-  final List<Map<String, dynamic>> _topics = [
+  final List<Map<String, dynamic>> _moods = [
     {
-      "name": "Clothing",
-      "icon": Icons.checkroom,
-      "color": const Color(0xFFD5C69F),
+      "name": "Stressed",
+      "icon": Icons.sentiment_very_dissatisfied,
+      "color": const Color(0xFFE6A490),
     },
     {
-      "name": "Death",
-      "icon": Icons.notifications_active,
-      "color": const Color(0xFF529CFF),
-    },
-    {"name": "Justice", "icon": Icons.gavel, "color": const Color(0xFFE9C56D)},
-    {
-      "name": "Gambling",
-      "icon": Icons.casino,
-      "color": const Color(0xFFEAD177),
+      "name": "Anxious",
+      "icon": Icons.psychology,
+      "color": const Color(0xFF9DBAEB),
     },
     {
-      "name": "Life Hereafter",
-      "icon": Icons.sync_alt,
-      "color": const Color(0xFFB3A37B),
+      "name": "Grateful",
+      "icon": Icons.volunteer_activism,
+      "color": const Color(0xFFD1B979),
     },
     {
-      "name": "Marriage",
-      "icon": Icons.favorite_border,
-      "color": const Color(0xFFDACFBD),
+      "name": "Hopeful",
+      "icon": Icons.wb_sunny_outlined,
+      "color": const Color(0xFFA4C49D),
+    },
+    {
+      "name": "Distracted",
+      "icon": Icons.blur_circular,
+      "color": const Color(0xFFB5A6C8),
+    },
+    {
+      "name": "Peaceful",
+      "icon": Icons.spa,
+      "color": const Color(0xFF7FBAB3),
     },
   ];
 
@@ -354,7 +359,7 @@ class _FeedPageState extends NyPage<FeedPage> {
 
                         const SizedBox(height: 24),
 
-                        // EXPLORE TOPICS SECTION
+                        // MOOD SECTION
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),
                           child: Column(
@@ -363,13 +368,13 @@ class _FeedPageState extends NyPage<FeedPage> {
                               Row(
                                 children: const [
                                   Icon(
-                                    Icons.auto_awesome,
+                                    Icons.mood,
                                     size: 20,
                                     color: Colors.black87,
                                   ),
                                   SizedBox(width: 8),
                                   Text(
-                                    "Explore Topics",
+                                    "How do you feel?",
                                     style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w900,
@@ -380,7 +385,7 @@ class _FeedPageState extends NyPage<FeedPage> {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                "Discover videos, blogs, playlists based on topic.",
+                                "Ava personalized Quran moments to your mood.",
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.black.withAlpha(130),
@@ -398,18 +403,18 @@ class _FeedPageState extends NyPage<FeedPage> {
                           child: Wrap(
                             spacing: 10,
                             runSpacing: 10,
-                            children: _topics.map((topic) {
+                            children: _moods.map((mood) {
                               return Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: topic["color"],
+                                  color: mood["color"],
                                   borderRadius: BorderRadius.circular(30),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: (topic["color"] as Color)
+                                      color: (mood["color"] as Color)
                                           .withAlpha(60),
                                       blurRadius: 6,
                                       offset: const Offset(0, 3),
@@ -420,13 +425,13 @@ class _FeedPageState extends NyPage<FeedPage> {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(
-                                      topic["icon"],
+                                      mood["icon"],
                                       size: 18,
                                       color: Colors.white,
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      topic["name"],
+                                      mood["name"],
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w800,
@@ -471,6 +476,37 @@ class _FeedPageState extends NyPage<FeedPage> {
                           ),
                         ),
                         const SizedBox(height: 12),
+
+                        // BLOG CARDS LIST
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: Column(
+                            children: const [
+                              BlogCard(
+                                title: "Building a Deep Connection with the Qur'an Daily",
+                                author: "Ustadh Ali",
+                                date: "Oct 12",
+                                image: "assets/images/blog_sample_1.png",
+                                category: "Reflection",
+                              ),
+                              BlogCard(
+                                title: "Finding Spiritual Focus During Busy Mornings",
+                                author: "Dr. Sara",
+                                date: "Oct 10",
+                                image: "assets/images/blog_sample_2.png",
+                                category: "Lifestyle",
+                              ),
+                              BlogCard(
+                                title: "The Importance of Mindful Recitation",
+                                author: "Yasir Q.",
+                                date: "Oct 09",
+                                image: "assets/images/blog_sample_1.png",
+                                category: "Learning",
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 30), // End spacing
                       ],
                     ),
                   ),
