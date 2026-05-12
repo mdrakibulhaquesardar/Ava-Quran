@@ -6,11 +6,13 @@ import '/config/app.dart';
 import '/config/storage_keys.dart';
 import '/resources/pages/feed_page.dart';
 import '/resources/pages/onboarding_page.dart';
+import '/app/networking/api_service.dart';
 
 class QuranAuthPage extends NyStatefulWidget {
-  static RouteView path = ("/quran-auth", (_) => QuranAuthPage());
+  final bool isLinking;
+  static RouteView path = ("/quran-auth", (context) => QuranAuthPage());
 
-  QuranAuthPage({super.key}) : super(child: () => _QuranAuthPageState());
+  QuranAuthPage({super.key, this.isLinking = false}) : super(child: () => _QuranAuthPageState());
 }
 
 class _QuranAuthPageState extends NyPage<QuranAuthPage> {
@@ -22,7 +24,7 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
   get init => () async {
     // Detect if we are in LINK mode or generic LOGIN mode
     final dynamic routeData = widget.data();
-    final bool isLinking = routeData != null && routeData['isLinking'] == true;
+    final bool isLinking = widget.isLinking || (routeData != null && routeData['isLinking'] == true);
 
     final String apiEndpoint = isLinking ? "/auth/quran/link" : "/auth/quran/login";
     final String authUrl = "${AppConfig.apiBaseUrl}$apiEndpoint";
@@ -54,6 +56,10 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
              NyLogger.error("WebView Error: ${error.description}");
           },
           onNavigationRequest: (NavigationRequest request) {
+            if (request.url.contains("/auth/quran/callback")) {
+              _handleDirectCallbackFetch(request.url);
+              return NavigationDecision.prevent;
+            }
             return NavigationDecision.navigate;
           },
         ),
@@ -155,6 +161,95 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
         NyLogger.error("OAuth Parse Failed: $e");
         showToastWarning(description: "Could not finalize link. Please try again.");
         Navigator.pop(context); // Take user back to login screen
+      }
+    }
+  }
+
+  /// Manually performs the callback exchange by calling our API direct instead of web page load
+  Future<void> _handleDirectCallbackFetch(String url) async {
+    if (_isHandlingCallback) return;
+    _isHandlingCallback = true;
+    
+    // Brief delay ensures loading state propagates correctly across threads
+    await Future.delayed(const Duration(milliseconds: 50));
+    setState(() => _isLoading = true);
+
+    try {
+      NyLogger.debug("[OAuth] Hijacked URL for Native Fetch: $url");
+      final Uri uri = Uri.parse(url);
+      final String? code = uri.queryParameters['code'];
+      final String? state = uri.queryParameters['state'];
+      final String? error = uri.queryParameters['error'];
+
+      NyLogger.debug("[OAuth] Parsed queryParams: code=$code, state=$state, error=$error");
+
+      if (error != null) {
+        throw Exception("Authorization Server Error: $error");
+      }
+
+      if (code == null) {
+        // Check if URL is just a generic loader page or needs to be ignored
+        if (!url.contains("?")) {
+           NyLogger.debug("[OAuth] Intercepted non-parameterized callback path. Skipping automatic fetch.");
+           _isHandlingCallback = false;
+           setState(() => _isLoading = false);
+           return;
+        }
+        throw Exception("No authorization code present in callback");
+      }
+
+      // For Linking, extract current bearer token to bind appropriately
+      String? currentToken;
+      final dynamic routeData = widget.data();
+      final bool isLinking = widget.isLinking || (routeData != null && routeData['isLinking'] == true);
+      
+      if (isLinking) {
+        currentToken = await StorageKeysConfig.bearerToken.read();
+      }
+
+      // Execute standard network transaction bypassing web browser runtime
+      final dynamic response = await ApiService().exchangeQuranCode(
+        code: code,
+        state: state,
+        bearerToken: currentToken,
+      );
+
+      if (response != null && response['access_token'] != null) {
+        // 1. Commit durable auth tokens
+        await StorageKeysConfig.bearerToken.save(response['access_token']);
+        if (response['refresh_token'] != null) {
+          await StorageKeysConfig.refreshToken.save(response['refresh_token']);
+        }
+
+        // 2. Persist global user ecosystem state
+        if (response['user'] != null) {
+          final Map<String, dynamic> userMap = Map<String, dynamic>.from(response['user']);
+          userMap['access_token'] = response['access_token'];
+          await Auth.authenticate(data: userMap);
+          
+          // Retain previous local device tracking states if they exist
+          bool hasOnboarded = await StorageKeysConfig.onboardingComplete.read() == true;
+          if (hasOnboarded) {
+            await StorageKeysConfig.onboardingComplete.save(true);
+          }
+        }
+
+        showToastSuccess(description: isLinking ? "Account linked successfully!" : "Securely connected with Quran.Foundation!");
+
+        // 3. Execute navigation lifecycle completions
+        if (isLinking) {
+          Navigator.pop(context, true);
+        } else {
+          routeTo(FeedPage.path, navigationType: NavigationType.pushAndForgetAll);
+        }
+      } else {
+        throw Exception("Invalid response data format from server");
+      }
+    } catch (e) {
+      NyLogger.error("OAuth Direct Manual Fetch Failed: $e");
+      showToastWarning(description: "Could not complete link. Please try again.");
+      if (mounted) {
+        Navigator.pop(context);
       }
     }
   }

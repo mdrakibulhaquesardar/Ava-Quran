@@ -80,6 +80,21 @@ class ApiService extends NyApiService {
     );
   }
 
+  /// Complete the Quran.Foundation OAuth authorization exchange
+  Future<dynamic> exchangeQuranCode({required String code, String? state, String? bearerToken}) async {
+    return await network(
+      request: (request) => request.get("/auth/quran/callback", 
+        queryParameters: {
+          "code": code,
+          if (state != null) "state": state,
+        },
+        options: Options(headers: {
+          if (bearerToken != null) "Authorization": "Bearer $bearerToken"
+        })
+      ),
+    );
+  }
+
   /// Invalidates session on server and discards active tokens
   Future<dynamic> logoutUser() async {
     return await network(

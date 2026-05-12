@@ -494,7 +494,7 @@ class _ProfilePageState extends NyPage<ProfilePage> {
     final bool? result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => QuranAuthPage(),
+        builder: (context) => QuranAuthPage(isLinking: true),
         settings: const RouteSettings(arguments: {"isLinking": true}),
       ),
     );

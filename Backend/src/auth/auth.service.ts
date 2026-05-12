@@ -115,36 +115,51 @@ export class AuthService {
   }
 
 
+  private getFinalRedirectUri(fallback: string): string {
+    return this.configService.get<string>('QURAN_REDIRECT_URI') || fallback;
+  }
+
   getQuranOAuthUrl(redirectUri: string, state?: string) {
     const baseUrl = this.configService.get<string>('Quran_END_POINT') || 'https://prelive-oauth2.quran.foundation';
     const clientId = this.configService.get<string>('QURAN_CLIENT_ID');
+    const finalUri = this.getFinalRedirectUri(redirectUri);
+    const finalState = (state && state.trim().length >= 8) ? state.trim() : 'quran_secure_auth_state_seed';
     const query: Record<string, string> = {
       client_id: clientId || '',
-      redirect_uri: redirectUri,
+      redirect_uri: finalUri,
       response_type: 'code',
       scope: 'openid offline_access',
+      state: finalState,
     };
-    if (state) {
-      query.state = state;
-    }
     const q = new URLSearchParams(query);
     return `${baseUrl}/oauth2/auth?${q.toString()}`;
   }
 
   async handleQuranCallback(code: string, redirectUri: string, state?: string) {
     const baseUrl = this.configService.get<string>('Quran_END_POINT') || 'https://prelive-oauth2.quran.foundation';
-    const clientId = this.configService.get<string>('QURAN_CLIENT_ID');
-    const clientSecret = this.configService.get<string>('QURAN_CLIENT_SECRET');
+    const rawClientId = this.configService.get<string>('QURAN_CLIENT_ID') || '';
+    const rawClientSecret = this.configService.get<string>('QURAN_CLIENT_SECRET') || '';
+    
+    // Enforce strict whitespace elimination to neutralize hidden formatting glitches
+    const clientId = rawClientId.trim();
+    const clientSecret = rawClientSecret.trim();
+    const finalUri = this.getFinalRedirectUri(redirectUri);
 
     try {
-      // 1. Exchange code for token
+      // 1. Exchange code for token (utilizing highest-compatibility Basic Authentication)
+      const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+      
+      const params = new URLSearchParams();
+      params.append('grant_type', 'authorization_code');
+      params.append('code', code);
+      params.append('redirect_uri', finalUri);
+
       const tokenRes = await firstValueFrom(
-        this.httpService.post(`${baseUrl}/oauth2/token`, {
-          grant_type: 'authorization_code',
-          code,
-          redirect_uri: redirectUri,
-          client_id: clientId,
-          client_secret: clientSecret,
+        this.httpService.post(`${baseUrl}/oauth2/token`, params.toString(), {
+          headers: { 
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${authString}`
+          },
         }),
       );
 
@@ -221,16 +236,25 @@ export class AuthService {
     if (!user || !user.quranRefreshToken) return null;
 
     const baseUrl = this.configService.get<string>('Quran_END_POINT') || 'https://prelive-oauth2.quran.foundation';
-    const clientId = this.configService.get<string>('QURAN_CLIENT_ID');
-    const clientSecret = this.configService.get<string>('QURAN_CLIENT_SECRET');
+    const rawClientId = this.configService.get<string>('QURAN_CLIENT_ID') || '';
+    const rawClientSecret = this.configService.get<string>('QURAN_CLIENT_SECRET') || '';
+    
+    const clientId = rawClientId.trim();
+    const clientSecret = rawClientSecret.trim();
 
     try {
+      const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+      
+      const params = new URLSearchParams();
+      params.append('grant_type', 'refresh_token');
+      params.append('refresh_token', user.quranRefreshToken);
+
       const tokenRes = await firstValueFrom(
-        this.httpService.post(`${baseUrl}/oauth2/token`, {
-          grant_type: 'refresh_token',
-          refresh_token: user.quranRefreshToken,
-          client_id: clientId,
-          client_secret: clientSecret,
+        this.httpService.post(`${baseUrl}/oauth2/token`, params.toString(), {
+          headers: { 
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': `Basic ${authString}`
+          },
         }),
       );
 
