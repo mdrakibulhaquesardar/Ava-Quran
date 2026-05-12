@@ -139,7 +139,7 @@ class _FeedPageState extends NyPage<FeedPage> {
                             Icons.notifications_none_outlined,
                           ),
                           const SizedBox(width: 12),
-                          _buildCircleIconButton(Icons.search),
+                          _buildCircleIconButton(Icons.person_2),
                         ],
                       ),
                     ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
+import '/resources/pages/video_feed_page.dart';
 
 class TrendVideoCard extends StatefulWidget {
   final String title;
@@ -23,7 +24,9 @@ class _TrendVideoCardState extends NyState<TrendVideoCard> {
 
   @override
   Widget view(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () => routeTo(VideoFeedPage.path),
+      child: Container(
       width: 150,
       margin: const EdgeInsets.only(right: 16),
       decoration: BoxDecoration(
@@ -132,6 +135,7 @@ class _TrendVideoCardState extends NyState<TrendVideoCard> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

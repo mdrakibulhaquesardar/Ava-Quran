@@ -1,3 +1,4 @@
+import '/resources/pages/video_feed_page.dart';
 import '/resources/pages/blogs_page.dart';
 import '/resources/pages/videos_page.dart';
 import '/resources/pages/peoples_page.dart';
@@ -26,4 +27,5 @@ appRouter() => nyRoutes((router) {
       router.add(PeoplesPage.path);
       router.add(VideosPage.path);
       router.add(BlogsPage.path);
+      router.add(VideoFeedPage.path);
 });
