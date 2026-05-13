@@ -120,7 +120,7 @@ export class AuthService {
     return this.configService.get<string>('QURAN_REDIRECT_URI') || fallback;
   }
 
-  getQuranOAuthUrl(redirectUri: string, state?: string) {
+  getQuranOAuthUrl(redirectUri: string, state?: string, loginHint?: string) {
     const baseUrl = this.configService.get<string>('Quran_END_POINT') || 'https://prelive-oauth2.quran.foundation';
     const clientId = this.configService.get<string>('QURAN_CLIENT_ID');
     const finalUri = this.getFinalRedirectUri(redirectUri);
@@ -132,6 +132,9 @@ export class AuthService {
       scope: 'openid offline_access',
       state: finalState,
     };
+    if (loginHint) {
+      query['login_hint'] = loginHint;
+    }
     const q = new URLSearchParams(query);
     return `${baseUrl}/oauth2/auth?${q.toString()}`;
   }

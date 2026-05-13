@@ -34,6 +34,15 @@ export class CollectionsController {
     return this.collectionsService.addAyah(req.user.userId, id, dto);
   }
 
+  @ApiOperation({ summary: 'List all dynamic Ayahs stored inside a collection' })
+  @Get(':id/ayahs')
+  async findAyahs(
+    @Req() req: any,
+    @Param('id') id: string
+  ) {
+    return this.collectionsService.getCollectionAyahs(req.user.userId, id);
+  }
+
   @ApiOperation({ summary: 'Untag/Remove Ayah from a folder' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id/ayahs/:ayahKey')

@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:multiavatar/multiavatar.dart';
 import '/resources/pages/quran_auth_page.dart';
 import '/resources/pages/auth_page.dart';
+import '/resources/pages/collections_page.dart';
 import '/app/networking/api_service.dart';
 import '/config/storage_keys.dart';
 
@@ -306,6 +307,14 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                           ),
                           _buildTileDivider(),
                           _buildSettingTile(
+                            icon: Icons.bookmark_outline_rounded,
+                            color: Colors.pink.shade400,
+                            title: "Collections",
+                            subtitle: "Saved Reminders & Reels",
+                            onTap: () => routeTo(CollectionsPage.path),
+                          ),
+                          _buildTileDivider(),
+                          _buildSettingTile(
                             icon: Icons.palette_outlined,
                             color: Colors.teal.shade400,
                             title: "App Appearance",
@@ -434,11 +443,12 @@ class _ProfilePageState extends NyPage<ProfilePage> {
     required String subtitle,
     bool isFirst = false,
     bool isLast = false,
+    VoidCallback? onTap,
   }) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap ?? () {},
         borderRadius: BorderRadius.vertical(
           top: isFirst ? const Radius.circular(24) : Radius.zero,
           bottom: isLast ? const Radius.circular(24) : Radius.zero,

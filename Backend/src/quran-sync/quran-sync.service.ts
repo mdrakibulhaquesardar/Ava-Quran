@@ -46,7 +46,10 @@ export class QuranSyncService {
    */
   private async makeAuthenticatedRequest(userId: string, method: 'post' | 'delete', endpoint: string, data?: any) {
     let token = await this.getActiveToken(userId);
-    if (!token) return; // User not linked to Quran.Foundation account. Silently ignore sync.
+    if (!token) {
+      console.log(`[Sync] Skipping sync for user \${userId}: No active Quran.Foundation token cached.`);
+      return;
+    }
 
     const makeCall = (t: string) => {
       const url = `\${this.baseSyncUrl}\${endpoint}`;
@@ -54,6 +57,7 @@ export class QuranSyncService {
         'x-auth-token': t,
         'x-client-id': this.clientId,
       };
+      console.log(`[Sync Debug] Initiating \${method.toUpperCase()} request to: \${url}`);
       if (method === 'post') {
         return firstValueFrom(this.httpService.post(url, data, { headers }));
       } else {
@@ -75,10 +79,19 @@ export class QuranSyncService {
             return;
           } catch (retryErr) {
             console.error(`[Sync] Retry failed for \${userId}:`, retryErr.message);
+            throw retryErr;
           }
+        } else {
+          throw new Error('Token refresh returned null during retry.');
         }
       } else {
-        console.error(`[Sync] Upstream API returned non-401 error:`, (error as AxiosError)?.response?.data || error.message);
+        const axiosErr = error as AxiosError;
+        const errorPayload = axiosErr?.response?.data;
+        console.error(
+          `[Sync Error Details] URL: \${this.baseSyncUrl}\${endpoint} | Status: \${axiosErr?.response?.status} | Message:`,
+          errorPayload || axiosErr.message
+        );
+        throw error;
       }
     }
   }

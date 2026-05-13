@@ -192,6 +192,45 @@ class ApiService extends NyApiService {
     );
   }
 
+  /// Fetch list of user collections
+  Future<dynamic> fetchCollections() async {
+    return await network(
+      request: (request) => request.get("/collections"),
+    );
+  }
+
+  /// Create a new collection
+  Future<dynamic> createCollection({required String title}) async {
+    return await network(
+      request: (request) => request.post("/collections", data: {
+        "title": title,
+      }),
+    );
+  }
+
+  /// Add an Ayah to a collection
+  Future<dynamic> addAyahToCollection({required String collectionId, required String ayahKey}) async {
+    return await network(
+      request: (request) => request.post("/collections/$collectionId/ayahs", data: {
+        "ayahKey": ayahKey,
+      }),
+    );
+  }
+
+  /// Remove an Ayah from a collection
+  Future<dynamic> removeAyahFromCollection({required String collectionId, required String ayahKey}) async {
+    return await network(
+      request: (request) => request.delete("/collections/$collectionId/ayahs/$ayahKey"),
+    );
+  }
+
+  /// Fetch all Ayahs inside a collection
+  Future<dynamic> fetchCollectionAyahs({required String collectionId}) async {
+    return await network(
+      request: (request) => request.get("/collections/$collectionId/ayahs"),
+    );
+  }
+
 /* Helpers
   |-------------------------------------------------------------------------- */
 

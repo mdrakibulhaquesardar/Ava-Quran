@@ -163,7 +163,7 @@ export class FeedService {
     return genericMessages[index];
   }
 
-  private async enrichFeedItem(content: any, mood: string, key: string, userId?: string) {
+  public async enrichFeedItem(content: any, mood: string, key: string, userId?: string) {
     const resolvedMood = mood?.toLowerCase() || 'peaceful';
 
     // 1. 100% Verified Live, Scraped Premium Islamic / Quran / Mosque Unsplash Hotlinks

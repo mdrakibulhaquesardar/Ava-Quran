@@ -62,12 +62,14 @@ export class AuthController {
   @Get('quran/link')
   quranLink(@Req() req: any, @Query('redirectUri') queryRedirect: string, @Res() res: Response) {
     const userId = req.user.userId;
+    const email = req.user.email;
     const protocol = req.protocol;
     const host = req.get('Host');
     const fallback = `${protocol}://${host}/auth/quran/callback`;
 
     // Pass userId in state so callback knows to link to THIS user instead of new creation
-    const url = this.authService.getQuranOAuthUrl(queryRedirect || fallback, userId);
+    // Pass email as loginHint to prefill login/signup on Quran Foundation provider
+    const url = this.authService.getQuranOAuthUrl(queryRedirect || fallback, userId, email);
     res.redirect(url);
   }
 

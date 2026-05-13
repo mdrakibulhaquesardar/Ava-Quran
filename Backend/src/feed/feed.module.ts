@@ -8,5 +8,6 @@ import { QuranModule } from '../quran/quran.module';
   imports: [PrismaModule, QuranModule],
   controllers: [FeedController],
   providers: [FeedService],
+  exports: [FeedService],
 })
 export class FeedModule {}

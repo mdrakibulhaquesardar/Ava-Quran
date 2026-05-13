@@ -298,22 +298,244 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
     final String? key = item["verseKey"];
     if (key == null) return;
 
-    HapticFeedback.lightImpact();
-    final bool currentSaved = item["isSaved"] ?? false;
+    HapticFeedback.mediumImpact();
+    final bool isCurrentlySaved = item["isSaved"] ?? false;
 
+    // Case: Unsaving (simply toggle off for now or track)
+    if (isCurrentlySaved) {
+      setState(() {
+        item["isSaved"] = false;
+      });
+      try {
+        await ApiService().trackInteraction(ayahKey: key, interactionType: "unsave");
+      } catch (e) {}
+      return;
+    }
+
+    // Case: Saving (Optimistic Update)
     setState(() {
-      item["isSaved"] = !currentSaved;
+      item["isSaved"] = true;
     });
 
     try {
-      await ApiService().trackInteraction(ayahKey: key, interactionType: currentSaved ? "unsave" : "save");
+      final colsRes = await ApiService().fetchCollections();
+      List<dynamic> userCols = colsRes != null ? List.from(colsRes) : [];
+
+      if (userCols.isEmpty) {
+        if (mounted) _showCollectionsSelectionSheet(item, index, userCols);
+      } else if (userCols.length == 1) {
+        // Directly save to the unique existing folder
+        final col = userCols.first;
+        await ApiService().addAyahToCollection(collectionId: col['id'].toString(), ayahKey: key);
+        if (mounted) {
+          showToastSuccess(description: "Added to '${col['title']}'");
+        }
+      } else {
+        if (mounted) _showCollectionsSelectionSheet(item, index, userCols);
+      }
+      
+      ApiService().trackInteraction(ayahKey: key, interactionType: "save");
     } catch (e) {
+      NyLogger.error("Error during collection save flow: $e");
       if (mounted) {
         setState(() {
-          item["isSaved"] = currentSaved;
+          item["isSaved"] = false;
         });
       }
     }
+  }
+
+  void _showCollectionsSelectionSheet(dynamic item, int index, List<dynamic> initialCollections) {
+    final String? key = item["verseKey"];
+    if (key == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.black87,
+      elevation: 0,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF191619), // Pure rich warm charcoal
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(color: Colors.white.withAlpha(15), width: 0.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                
+                const Text(
+                  "Save to Collection",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                if (initialCollections.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      "Create folders to organize spiritual reminders.",
+                      style: TextStyle(color: Colors.white60, fontSize: 13),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: initialCollections.length,
+                      itemBuilder: (c, i) {
+                        final col = initialCollections[i];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(10),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.folder_open_rounded, color: Colors.white70, size: 20),
+                          ),
+                          title: Text(
+                            col['title'] ?? '',
+                            style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
+                          ),
+                          trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+                          onTap: () async {
+                            Navigator.pop(ctx);
+                            try {
+                              await ApiService().addAyahToCollection(collectionId: col['id'].toString(), ayahKey: key);
+                              if (mounted) {
+                                showToastSuccess(description: "Added to '${col['title']}'");
+                              }
+                            } catch (e) {
+                               NyLogger.error("Failed inline save: $e");
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                
+                const Divider(color: Colors.white12, height: 24),
+                
+                InkWell(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showInlineCreateFlow(key);
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEC4899).withAlpha(30),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.add, color: Color(0xFFEC4899), size: 20),
+                        ),
+                        const SizedBox(width: 16),
+                        const Text(
+                          "New Collection",
+                          style: TextStyle(
+                            color: Color(0xFFEC4899),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showInlineCreateFlow(String verseKey) {
+    final TextEditingController controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF201E21),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("New Collection", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: "e.g. Guided Peace",
+            hintStyle: const TextStyle(color: Colors.white38),
+            filled: true,
+            fillColor: Colors.white.withAlpha(10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEC4899)),
+            onPressed: () async {
+              final text = controller.text.trim();
+              if (text.isEmpty) return;
+              Navigator.pop(ctx);
+              try {
+                final newCol = await ApiService().createCollection(title: text);
+                if (newCol != null) {
+                  await ApiService().addAyahToCollection(
+                    collectionId: newCol['id'].toString(),
+                    ayahKey: verseKey
+                  );
+                  if (mounted) {
+                    showToastSuccess(description: "Added to new '$text' folder");
+                  }
+                }
+              } catch(e) {
+                NyLogger.error("Inline folder creation failed: $e");
+              }
+            },
+            child: const Text("Create", style: TextStyle(color: Colors.white)),
+          )
+        ],
+      ),
+    );
   }
 
   Future<void> _handleShare(int index) async {
