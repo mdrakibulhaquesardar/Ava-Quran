@@ -18,11 +18,15 @@ model User {
   quranRefreshToken    String?
   quranTokenExpiresAt  DateTime?
   name                 String?
+  username             String?  @unique
+  bio                  String?
   avatar               String?
   preferredLanguage    String?
   favoriteReciter      String?
   onboardingComplete   Boolean  @default(false)
   moodPreference       String?
+  followersCount       Int      @default(0)
+  followingCount       Int      @default(0)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -30,6 +34,9 @@ model User {
   collections Collection[]
   feedHistory FeedHistory[]
   streak      Streak?
+  
+  followers   UserFollow[] @relation("UserFollowers")
+  following   UserFollow[] @relation("UserFollowing")
 
   @@map("users")
   @@index([quranId])
@@ -98,4 +105,19 @@ model Streak {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("streaks")
+}
+
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+  @@map("user_follows")
 }

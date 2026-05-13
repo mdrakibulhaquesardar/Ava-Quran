@@ -7,6 +7,8 @@ import '/resources/widgets/blog_card_widget.dart';
 import '/resources/pages/profile_page.dart';
 import '/resources/pages/blog_details_page.dart';
 import '/resources/pages/video_feed_page.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/services.dart';
 import '../../app/networking/api_service.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -64,32 +66,13 @@ class _FeedPageState extends NyPage<FeedPage> {
   int _selectedSubTabIndex = 0; // 0 for Discover, 1 for Following
   final PageController _pageController = PageController();
 
-  final List<Map<String, String>> _mockUsers = [
-    {
-      "name": "Sarah Ahmed",
-      "bio": "Daily Quran Reflections & Journaling",
-      "image": "assets/images/avatar_1.png",
-      "followers": "1.2k",
-    },
-    {
-      "name": "Zaid Al-Farooq",
-      "bio": "Community Leader & Mentor",
-      "image": "assets/images/avatar_2.png",
-      "followers": "850",
-    },
-    {
-      "name": "Aisha Rahman",
-      "bio": "Islamic Art & Modesty Designer",
-      "image": "assets/images/avatar_1.png",
-      "followers": "2.4k",
-    },
-    {
-      "name": "Omar H.",
-      "bio": "Software Developer by day, Qari by night",
-      "image": "assets/images/avatar_2.png",
-      "followers": "1.5k",
-    },
-  ];
+  // DISCOVER USERS & FOLLOW STATE
+  late ScrollController _peoplesScrollController;
+  List<dynamic> _discoverUsers = [];
+  bool _isLoadingUsers = true;
+  bool _isFetchingMoreUsers = false;
+  int _usersPage = 1;
+  bool _usersHasMore = true;
 
   // BRAND COLOR
   final Color _brandAccent = const Color(0xFF267B92);
@@ -129,8 +112,111 @@ class _FeedPageState extends NyPage<FeedPage> {
 
   @override
   get init => () {
+    _peoplesScrollController = ScrollController()..addListener(_onPeoplesScroll);
     _fetchMostLovedData();
+    _fetchDiscoverUsers();
   };
+
+  @override
+  void dispose() {
+    _peoplesScrollController.dispose();
+    super.dispose();
+  }
+
+  void _onPeoplesScroll() {
+    if (_peoplesScrollController.position.pixels >= _peoplesScrollController.position.maxScrollExtent - 300) {
+      if (!_isLoadingUsers && !_isFetchingMoreUsers && _usersHasMore) {
+        _fetchMoreDiscoverUsers();
+      }
+    }
+  }
+
+  Future<void> _fetchDiscoverUsers() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingUsers = true;
+      _usersPage = 1;
+    });
+    try {
+      final response = await ApiService().fetchDiscoverUsers(page: _usersPage, limit: 20);
+      if (response != null && response['items'] != null && mounted) {
+        setState(() {
+          _discoverUsers = List.from(response['items']);
+          _usersHasMore = response['hasMore'] ?? false;
+        });
+      }
+    } catch (e) {
+      NyLogger.error("Error fetching discover users: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingUsers = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchMoreDiscoverUsers() async {
+    if (!mounted) return;
+    setState(() {
+      _isFetchingMoreUsers = true;
+    });
+    try {
+      final nextPage = _usersPage + 1;
+      final response = await ApiService().fetchDiscoverUsers(page: nextPage, limit: 20);
+      if (response != null && response['items'] != null && mounted) {
+        setState(() {
+          _usersPage = nextPage;
+          _discoverUsers.addAll(response['items']);
+          _usersHasMore = response['hasMore'] ?? false;
+        });
+      }
+    } catch (e) {
+      NyLogger.error("Error fetching more discover users: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFetchingMoreUsers = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleFollow(int index) async {
+    final user = _discoverUsers[index];
+    final String userId = user["id"].toString();
+    final bool isCurrentlyFollowing = user["isFollowing"] ?? false;
+    final int currentFollowers = user["followersCount"] ?? 0;
+
+    HapticFeedback.lightImpact();
+
+    // Optimistic UI Updates
+    setState(() {
+      user["isFollowing"] = !isCurrentlyFollowing;
+      user["followersCount"] = isCurrentlyFollowing
+          ? (currentFollowers - 1).clamp(0, 99999999)
+          : currentFollowers + 1;
+    });
+
+    try {
+      if (isCurrentlyFollowing) {
+        await ApiService().unfollowUser(targetUserId: userId);
+      } else {
+        await ApiService().followUser(targetUserId: userId);
+      }
+    } catch (e) {
+      // Revert state atomically on API fail
+      if (mounted) {
+        setState(() {
+          user["isFollowing"] = isCurrentlyFollowing;
+          user["followersCount"] = currentFollowers;
+        });
+        showToastDanger(
+          description: "Connection dropped, please try again.",
+        );
+      }
+    }
+  }
 
   Future<void> _fetchMostLovedData() async {
     setState(() {
@@ -711,7 +797,54 @@ class _FeedPageState extends NyPage<FeedPage> {
     );
   }
 
+
   Widget _buildPeoplesView() {
+    if (_isLoadingUsers) {
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        itemCount: 6,
+        physics: const NeverScrollableScrollPhysics(),
+        itemBuilder: (context, index) => Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            height: 87,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_discoverUsers.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 64, color: _brandAccent.withAlpha(60)),
+            const SizedBox(height: 16),
+            Text(
+              "No community members found.",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _fetchDiscoverUsers,
+              icon: const Icon(Icons.refresh),
+              label: const Text("Retry"),
+            )
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
         // SEARCH BAR
@@ -747,21 +880,45 @@ class _FeedPageState extends NyPage<FeedPage> {
 
         // LIST CONTENT
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            physics: const BouncingScrollPhysics(),
-            itemCount: _mockUsers.length,
-            itemBuilder: (context, index) {
-              final user = _mockUsers[index];
-              return _buildUserCard(user);
-            },
+          child: RefreshIndicator(
+            onRefresh: _fetchDiscoverUsers,
+            child: ListView.builder(
+              controller: _peoplesScrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: _discoverUsers.length + (_isFetchingMoreUsers ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _discoverUsers.length) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7FBAB3)),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                final user = _discoverUsers[index];
+                return _buildUserCard(user, index);
+              },
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildUserCard(Map<String, String> user) {
+  Widget _buildUserCard(dynamic user, int index) {
+    final bool isFollowing = user["isFollowing"] ?? false;
+    final String avatar = user["avatar"] ?? "";
+    final String name = user["name"] ?? "Reflector";
+    final String bio = user["bio"] ?? "Quran Learner & Reflecter";
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -772,6 +929,7 @@ class _FeedPageState extends NyPage<FeedPage> {
       ),
       child: Row(
         children: [
+          // Network Avatar or Fallback Multiavatar
           Container(
             width: 55,
             height: 55,
@@ -782,19 +940,30 @@ class _FeedPageState extends NyPage<FeedPage> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(30),
-              child: SvgPicture.string(
-                multiavatar(user["name"]!),
-                fit: BoxFit.cover,
-              ),
+              child: avatar.startsWith("http")
+                  ? CachedNetworkImage(
+                      imageUrl: avatar,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) => SvgPicture.string(
+                        multiavatar(name),
+                        fit: BoxFit.cover,
+                      ),
+                    )
+                  : SvgPicture.string(
+                      multiavatar(name),
+                      fit: BoxFit.cover,
+                    ),
             ),
           ),
           const SizedBox(width: 16),
+          
+          // Text Details Block
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  user["name"]!,
+                  name,
                   style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
@@ -803,7 +972,7 @@ class _FeedPageState extends NyPage<FeedPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  user["bio"]!,
+                  bio,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -814,7 +983,7 @@ class _FeedPageState extends NyPage<FeedPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "${user["followers"]} followers",
+                  "${_formatCounter(user["followersCount"] ?? 0)} followers",
                   style: TextStyle(
                     fontSize: 12,
                     color: _brandAccent,
@@ -824,25 +993,38 @@ class _FeedPageState extends NyPage<FeedPage> {
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: _brandAccent,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: _brandAccent.withAlpha(50),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+          
+          // Beautiful Interactive Follow Toggle Button
+          GestureDetector(
+            onTap: () => _toggleFollow(index),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: isFollowing ? Colors.transparent : _brandAccent,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isFollowing ? Colors.grey.shade300 : _brandAccent,
+                  width: 1.5,
                 ),
-              ],
-            ),
-            child: const Text(
-              "Follow",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
+                boxShadow: isFollowing
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: _brandAccent.withAlpha(50),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+              ),
+              child: Text(
+                isFollowing ? "Following" : "Follow",
+                style: TextStyle(
+                  color: isFollowing ? Colors.grey.shade700 : Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
               ),
             ),
           ),

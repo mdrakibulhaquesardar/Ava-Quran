@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body, UseGuards, Req, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Body, Query, Param, UseGuards, Req, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -47,5 +47,31 @@ export class UsersController {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, quranAccessToken, quranRefreshToken, ...safeUser } = updated;
     return safeUser;
+  }
+
+  @ApiOperation({ summary: 'Get a paginated list of platform users to discover' })
+  @Get('discover')
+  async getDiscover(
+    @Req() req: any,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    return this.usersService.getDiscoverUsers(
+      req.user.userId,
+      parseInt(page, 10),
+      parseInt(limit, 10),
+    );
+  }
+
+  @ApiOperation({ summary: 'Follow a specific community member' })
+  @Post('follow')
+  async followUser(@Req() req: any, @Body() body: { targetUserId: string }) {
+    return this.usersService.followUser(req.user.userId, body.targetUserId);
+  }
+
+  @ApiOperation({ summary: 'Unfollow a community member' })
+  @Delete('follow/:targetUserId')
+  async unfollowUser(@Req() req: any, @Param('targetUserId') targetUserId: string) {
+    return this.usersService.unfollowUser(req.user.userId, targetUserId);
   }
 }

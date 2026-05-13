@@ -140,6 +140,32 @@ class ApiService extends NyApiService {
     );
   }
 
+  /// Fetch a paginated list of creators to discover and follow
+  Future<dynamic> fetchDiscoverUsers({int page = 1, int limit = 20}) async {
+    return await network(
+      request: (request) => request.get("/users/discover", queryParameters: {
+        "page": page.toString(),
+        "limit": limit.toString(),
+      }),
+    );
+  }
+
+  /// Follow a user by their ID
+  Future<dynamic> followUser({required String targetUserId}) async {
+    return await network(
+      request: (request) => request.post("/users/follow", data: {
+        "targetUserId": targetUserId,
+      }),
+    );
+  }
+
+  /// Unfollow a user by their ID
+  Future<dynamic> unfollowUser({required String targetUserId}) async {
+    return await network(
+      request: (request) => request.delete("/users/follow/$targetUserId"),
+    );
+  }
+
 /* Helpers
   |-------------------------------------------------------------------------- */
 
