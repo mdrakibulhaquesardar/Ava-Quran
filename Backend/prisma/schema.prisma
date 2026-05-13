@@ -37,6 +37,7 @@ model User {
   
   followers   UserFollow[] @relation("UserFollowers")
   following   UserFollow[] @relation("UserFollowing")
+  blogs       Blog[]
 
   @@map("users")
   @@index([quranId])
@@ -120,4 +121,22 @@ model UserFollow {
   @@index([followerId])
   @@index([followingId])
   @@map("user_follows")
+}
+
+model Blog {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String
+  content        String   @db.Text
+  thumbnailUrl   String?
+  contentPreview String?  @db.Text
+  readTime       Int      @default(1)
+  likesCount     Int      @default(0)
+  commentsCount  Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("blogs")
 }

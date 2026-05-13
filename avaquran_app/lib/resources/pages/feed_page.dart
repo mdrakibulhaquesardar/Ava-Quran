@@ -7,6 +7,7 @@ import '/resources/widgets/blog_card_widget.dart';
 import '/resources/pages/profile_page.dart';
 import '/resources/pages/blog_details_page.dart';
 import '/resources/pages/video_feed_page.dart';
+import '/resources/pages/create_blog_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/services.dart';
 import '../../app/networking/api_service.dart';
@@ -27,44 +28,18 @@ class _FeedPageState extends NyPage<FeedPage> {
     "Playlists",
   ];
   int _selectedNavTabIndex = 0;
-  int _selectedBlogCategoryIndex = 0;
-  final List<String> _blogCategories = ["All", "Reflection", "Lifestyle", "Learning", "History", "Kids"];
 
   List<dynamic> _mostLovedVideos = [];
   bool _isLoadingLoved = true;
 
-  final List<Map<String, String>> _blogs = [
-    {
-      "title": "Building a Deep Connection with the Qur'an Daily",
-      "author": "Ustadh Ali",
-      "date": "Oct 12",
-      "image": "assets/images/blog_sample_1.png",
-      "category": "Reflection",
-    },
-    {
-      "title": "Finding Spiritual Focus During Busy Mornings",
-      "author": "Dr. Sara",
-      "date": "Oct 10",
-      "image": "assets/images/blog_sample_2.png",
-      "category": "Lifestyle",
-    },
-    {
-      "title": "The Importance of Mindful Recitation",
-      "author": "Yasir Q.",
-      "date": "Oct 09",
-      "image": "assets/images/blog_sample_1.png",
-      "category": "Learning",
-    },
-    {
-      "title": "Prophetic Habits for Balanced Physical Health",
-      "author": "Imran M.",
-      "date": "Oct 05",
-      "image": "assets/images/blog_sample_2.png",
-      "category": "Lifestyle",
-    },
-  ];
+  // DYNAMIC BLOGS STATE
+  late ScrollController _blogsScrollController;
+  List<dynamic> _blogItems = [];
+  bool _isLoadingBlogs = true;
+  bool _isFetchingMoreBlogs = false;
+  int _blogsPage = 1;
+  bool _blogsHasMore = true;
   int _selectedSubTabIndex = 0; // 0 for Discover, 1 for Following
-  final PageController _pageController = PageController();
 
   // DISCOVER USERS & FOLLOW STATE
   late ScrollController _peoplesScrollController;
@@ -113,13 +88,16 @@ class _FeedPageState extends NyPage<FeedPage> {
   @override
   get init => () {
     _peoplesScrollController = ScrollController()..addListener(_onPeoplesScroll);
+    _blogsScrollController = ScrollController()..addListener(_onBlogsScroll);
     _fetchMostLovedData();
     _fetchDiscoverUsers();
+    _fetchBlogsData();
   };
 
   @override
   void dispose() {
     _peoplesScrollController.dispose();
+    _blogsScrollController.dispose();
     super.dispose();
   }
 
@@ -127,6 +105,64 @@ class _FeedPageState extends NyPage<FeedPage> {
     if (_peoplesScrollController.position.pixels >= _peoplesScrollController.position.maxScrollExtent - 300) {
       if (!_isLoadingUsers && !_isFetchingMoreUsers && _usersHasMore) {
         _fetchMoreDiscoverUsers();
+      }
+    }
+  }
+  void _onBlogsScroll() {
+    if (_blogsScrollController.position.pixels >= _blogsScrollController.position.maxScrollExtent - 300) {
+      if (!_isLoadingBlogs && !_isFetchingMoreBlogs && _blogsHasMore) {
+        _fetchMoreBlogsData();
+      }
+    }
+  }
+
+  Future<void> _fetchBlogsData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingBlogs = true;
+      _blogsPage = 1;
+    });
+    try {
+      final response = await ApiService().fetchBlogs(page: _blogsPage, limit: 10);
+      if (response != null && response['items'] != null && mounted) {
+        setState(() {
+          _blogItems = List.from(response['items']);
+          _blogsHasMore = response['hasMore'] ?? false;
+        });
+      }
+    } catch (e) {
+      NyLogger.error("Error fetching blogs: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingBlogs = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchMoreBlogsData() async {
+    if (!mounted) return;
+    setState(() {
+      _isFetchingMoreBlogs = true;
+    });
+    try {
+      final nextPage = _blogsPage + 1;
+      final response = await ApiService().fetchBlogs(page: nextPage, limit: 10);
+      if (response != null && response['items'] != null && mounted) {
+        setState(() {
+          _blogsPage = nextPage;
+          _blogItems.addAll(response['items']);
+          _blogsHasMore = response['hasMore'] ?? false;
+        });
+      }
+    } catch (e) {
+      NyLogger.error("Error fetching more blogs: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFetchingMoreBlogs = false;
+        });
       }
     }
   }
@@ -255,7 +291,17 @@ class _FeedPageState extends NyPage<FeedPage> {
 
   @override
   Widget view(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: _selectedNavTabIndex == 0,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+        if (_selectedNavTabIndex != 0) {
+          setState(() {
+            _selectedNavTabIndex = 0;
+          });
+        }
+      },
+      child: Scaffold(
       backgroundColor: const Color(
         0xFFF9FAFB,
       ), // Slightly off-white premium back
@@ -287,7 +333,18 @@ class _FeedPageState extends NyPage<FeedPage> {
                       Image.asset("assets/images/Icon_text.png", height: 45),
                       Row(
                         children: [
-                          _buildCircleIconButton(Icons.add),
+                          _buildCircleIconButton(
+                            Icons.add,
+                            onTap: () async {
+                              final published = await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => CreateBlogPage()),
+                              );
+                              if (published == true) {
+                                _fetchBlogsData();
+                              }
+                            },
+                          ),
                           const SizedBox(width: 12),
                           _buildCircleIconButton(
                             Icons.notifications_none_outlined,
@@ -315,11 +372,9 @@ class _FeedPageState extends NyPage<FeedPage> {
                       final bool isSelected = index == _selectedNavTabIndex;
                       return GestureDetector(
                         onTap: () {
-                          _pageController.animateToPage(
-                            index,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
+                          setState(() {
+                            _selectedNavTabIndex = index;
+                          });
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
@@ -368,12 +423,8 @@ class _FeedPageState extends NyPage<FeedPage> {
 
                 // SCROLLABLE MAIN CONTENT
                 Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      setState(() => _selectedNavTabIndex = index);
-                    },
-                    physics: const BouncingScrollPhysics(),
+                  child: IndexedStack(
+                    index: _selectedNavTabIndex,
                     children: [
                       // TAB 0: FEED CONTENT
                       SingleChildScrollView(
@@ -727,31 +778,40 @@ class _FeedPageState extends NyPage<FeedPage> {
                         // BLOG CARDS LIST
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Column(
-                            children: const [
-                              BlogCard(
-                                title: "Building a Deep Connection with the Qur'an Daily",
-                                author: "Ustadh Ali",
-                                date: "Oct 12",
-                                image: "assets/images/blog_sample_1.png",
-                                category: "Reflection",
-                              ),
-                              BlogCard(
-                                title: "Finding Spiritual Focus During Busy Mornings",
-                                author: "Dr. Sara",
-                                date: "Oct 10",
-                                image: "assets/images/blog_sample_2.png",
-                                category: "Lifestyle",
-                              ),
-                              BlogCard(
-                                title: "The Importance of Mindful Recitation",
-                                author: "Yasir Q.",
-                                date: "Oct 09",
-                                image: "assets/images/blog_sample_1.png",
-                                category: "Learning",
-                              ),
-                            ],
-                          ),
+                          child: _isLoadingBlogs
+                              ? Column(
+                                  children: List.generate(
+                                    3,
+                                    (index) => Shimmer.fromColors(
+                                      baseColor: Colors.grey[300]!,
+                                      highlightColor: Colors.grey[100]!,
+                                      child: Container(
+                                        height: 109,
+                                        margin: const EdgeInsets.only(bottom: 16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : _blogItems.isEmpty
+                                  ? Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(20.0),
+                                        child: Text(
+                                          "No articles shared yet.",
+                                          style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    )
+                                  : Column(
+                                      children: _blogItems
+                                          .take(3)
+                                          .map((blog) => BlogCard(blog: blog))
+                                          .toList(),
+                                    ),
                         ),
                         const SizedBox(height: 30), // End spacing
                       ],
@@ -778,6 +838,7 @@ class _FeedPageState extends NyPage<FeedPage> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
@@ -1062,6 +1123,52 @@ class _FeedPageState extends NyPage<FeedPage> {
   }
 
   Widget _buildBlogsView() {
+    if (_isLoadingBlogs) {
+      return ListView.builder(
+        padding: const EdgeInsets.all(20),
+        itemCount: 5,
+        physics: const NeverScrollableScrollPhysics(),
+        itemBuilder: (context, index) => Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            height: index == 0 ? 220 : 109,
+            margin: const EdgeInsets.only(bottom: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (_blogItems.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.article_outlined, size: 64, color: _brandAccent.withAlpha(60)),
+            const SizedBox(height: 16),
+            Text(
+              "No community blogs published yet.",
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _fetchBlogsData,
+              icon: const Icon(Icons.refresh),
+              label: const Text("Refresh Feed"),
+            )
+          ],
+        ),
+      );
+    }
+
     return Column(
       children: [
         // SEARCH BAR
@@ -1092,223 +1199,203 @@ class _FeedPageState extends NyPage<FeedPage> {
           ),
         ),
 
-        // CATEGORIES SELECTOR
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            physics: const BouncingScrollPhysics(),
-            itemCount: _blogCategories.length,
-            itemBuilder: (context, index) {
-              bool isSelected = index == _selectedBlogCategoryIndex;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedBlogCategoryIndex = index;
-                  });
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected ? _brandAccent : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isSelected ? _brandAccent : Colors.grey.shade200,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: _brandAccent.withAlpha(40),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            )
-                          ]
-                        : [],
-                  ),
-                  child: Text(
-                    _blogCategories[index],
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black54,
-                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
         // SCROLLABLE BLOGS CONTENT
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            physics: const BouncingScrollPhysics(),
-            children: [
-              // HERO SPOTLIGHT
-              _buildBlogHeroPost(),
-              
-              const SizedBox(height: 25),
-              
-              // RECENT POSTS HEADER
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Recent Articles",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black87,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      "View all",
-                      style: TextStyle(
-                        color: _brandAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+          child: RefreshIndicator(
+            onRefresh: _fetchBlogsData,
+            child: ListView.builder(
+              controller: _blogsScrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: _blogItems.length + (_isFetchingMoreBlogs ? 1 : 0),
+              itemBuilder: (context, index) {
+                // Bottom pagination loader
+                if (index == _blogItems.length) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7FBAB3)),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  );
+                }
 
-              const SizedBox(height: 8),
+                final blog = _blogItems[index];
 
-              // DYNAMIC LIST GENERATOR
-              ..._blogs.map((blog) => BlogCard(
-                    title: blog["title"]!,
-                    author: blog["author"]!,
-                    date: blog["date"]!,
-                    image: blog["image"]!,
-                    category: blog["category"]!,
-                  )).toList(),
+                // First item: Hero spotlight followed by header
+                if (index == 0) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildBlogHeroPost(blog),
+                      const SizedBox(height: 25),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Recent Articles",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black87,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: Text(
+                              "View all",
+                              style: TextStyle(
+                                color: _brandAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  );
+                }
 
-              const SizedBox(height: 30),
-            ],
+                // Remaining items
+                return BlogCard(blog: blog);
+              },
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildBlogHeroPost() {
+  Widget _buildBlogHeroPost(dynamic blog) {
+    final String id = blog["id"]?.toString() ?? UniqueKey().toString();
+    final String title = blog["title"] ?? "";
+    final String author = blog["user"]?["name"] ?? "Ava User";
+    final String? thumbUrl = blog["thumbnailUrl"];
+
     return GestureDetector(
-      onTap: () => routeTo(BlogDetailsPage.path, data: {
-        'title': "Cultivating a Life of Gratitude Through Divine Teachings",
-        'author': "Mufti Menk",
-        'date': "Today",
-        'image': "assets/images/blog_sample_1.png",
-        'category': "Featured",
-      }),
+      onTap: () => routeTo(BlogDetailsPage.path, data: blog),
       child: Container(
         width: double.infinity,
         height: 220,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(10),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.asset(
-              "assets/images/blog_sample_1.png",
-              fit: BoxFit.cover,
-            ),
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withAlpha(0),
-                      Colors.black.withAlpha(160),
-                    ],
-                    stops: const [0.4, 1.0],
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(10),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            )
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Network-optimised Hero spotlight cover
+              Hero(
+                tag: "blog-image-$id",
+                child: (thumbUrl != null && thumbUrl.isNotEmpty)
+                    ? CachedNetworkImage(
+                        imageUrl: thumbUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) => Container(
+                          color: const Color(0xFFEBF5F7),
+                          child: const Icon(Icons.article_outlined, color: Color(0xFF267B92), size: 48),
+                        ),
+                      )
+                    : Container(
+                        color: const Color(0xFFEBF5F7),
+                        child: const Icon(Icons.article_outlined, color: Color(0xFF267B92), size: 48),
+                      ),
+              ),
+              
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withAlpha(0),
+                        Colors.black.withAlpha(160),
+                      ],
+                      stops: const [0.4, 1.0],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      "FEATURED",
-                      style: TextStyle(
-                        color: _brandAccent,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1,
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Cultivating a Life of Gratitude Through Divine Teachings",
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: const [
-                      CircleAvatar(
-                        radius: 12,
-                        backgroundColor: Colors.white24,
-                        child: Icon(Icons.person, size: 14, color: Colors.white),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        "By Mufti Menk",
+                      child: Text(
+                        "FEATURED",
                         style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                          color: _brandAccent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
                         ),
                       ),
-                      Spacer(),
-                      Icon(Icons.bookmark_border_rounded, color: Colors.white, size: 20),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 12,
+                          backgroundColor: Colors.white24,
+                          child: Icon(Icons.person, size: 14, color: Colors.white),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "By $author",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.bookmark_border_rounded, color: Colors.white, size: 20),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

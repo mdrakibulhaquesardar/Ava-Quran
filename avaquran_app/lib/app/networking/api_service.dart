@@ -165,6 +165,32 @@ class ApiService extends NyApiService {
       request: (request) => request.delete("/users/follow/$targetUserId"),
     );
   }
+  /// Fetch a paginated list of public community blogs
+  Future<dynamic> fetchBlogs({int page = 1, int limit = 10}) async {
+    return await network(
+      request: (request) => request.get("/blogs", queryParameters: {
+        "page": page.toString(),
+        "limit": limit.toString(),
+      }),
+    );
+  }
+
+  /// Fetch a single blog article's full details by ID
+  Future<dynamic> fetchBlogDetails({required String blogId}) async {
+    return await network(
+      request: (request) => request.get("/blogs/$blogId"),
+    );
+  }
+
+  /// Create and publish a new blog entry
+  Future<dynamic> createBlog({required String title, required String content}) async {
+    return await network(
+      request: (request) => request.post("/blogs", data: {
+        "title": title,
+        "content": content,
+      }),
+    );
+  }
 
 /* Helpers
   |-------------------------------------------------------------------------- */

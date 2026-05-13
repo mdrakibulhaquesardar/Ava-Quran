@@ -13,6 +13,7 @@ import { CollectionsModule } from './collections/collections.module';
 import { StreaksModule } from './streaks/streaks.module';
 import { QuranSyncModule } from './quran-sync/quran-sync.module';
 import { AiModule } from './ai/ai.module';
+import { BlogsModule } from './blogs/blogs.module';
 
 const envDir = join(__dirname, '..');
 
@@ -34,6 +35,7 @@ const envDir = join(__dirname, '..');
     StreaksModule,
     QuranSyncModule,
     AiModule,
+    BlogsModule,
   ],
 })
 export class AppModule {}
