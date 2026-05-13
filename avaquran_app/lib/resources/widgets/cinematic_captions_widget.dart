@@ -5,12 +5,14 @@ class CinematicCaptionsWidget extends StatefulWidget {
   final String arabic;
   final String translation;
   final bool isActive;
+  final bool isPaused;
 
   const CinematicCaptionsWidget({
     super.key,
     required this.arabic,
     required this.translation,
     required this.isActive,
+    this.isPaused = false,
   });
 
   @override
@@ -30,7 +32,7 @@ class _CinematicCaptionsWidgetState extends State<CinematicCaptionsWidget> {
     _arabicWords = widget.arabic.split(' ');
     _translationWords = widget.translation.split(' ');
 
-    if (widget.isActive) {
+    if (widget.isActive && !widget.isPaused) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _startSequence();
       });
@@ -40,20 +42,44 @@ class _CinematicCaptionsWidgetState extends State<CinematicCaptionsWidget> {
   @override
   void didUpdateWidget(covariant CinematicCaptionsWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+    
+    // Lifecycle Active Toggle
     if (widget.isActive && !oldWidget.isActive) {
       _startSequence();
     } else if (!widget.isActive && oldWidget.isActive) {
       _resetSequence();
     }
+
+    // Playback Synced Freezing/Thawing
+    if (widget.isActive) {
+      if (widget.isPaused && !oldWidget.isPaused) {
+        _pauseSequence();
+      } else if (!widget.isPaused && oldWidget.isPaused) {
+        _resumeSequence();
+      }
+    }
   }
 
   void _startSequence() {
     _resetSequence();
+    if (!widget.isPaused) {
+      _resumeSequence();
+    }
+  }
 
-    // Staggered revealing of words to simulate narration timing
+  void _pauseSequence() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  void _resumeSequence() {
+    if (_timer != null) return;
+
     int totalStepCount = (_arabicWords.length > _translationWords.length)
         ? _arabicWords.length
         : _translationWords.length;
+
+    if (_revealedWordCount >= totalStepCount + 2) return;
 
     _timer = Timer.periodic(const Duration(milliseconds: 900), (timer) {
       if (!mounted) return;
@@ -62,12 +88,14 @@ class _CinematicCaptionsWidgetState extends State<CinematicCaptionsWidget> {
       });
       if (_revealedWordCount >= totalStepCount + 2) {
         _timer?.cancel();
+        _timer = null;
       }
     });
   }
 
   void _resetSequence() {
     _timer?.cancel();
+    _timer = null;
     setState(() {
       _revealedWordCount = 0;
     });

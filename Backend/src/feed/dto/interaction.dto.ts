@@ -8,10 +8,10 @@ export class CreateInteractionDto {
 
   @ApiProperty({
     example: 'viewed',
-    enum: ['viewed', 'saved', 'reflected', 'shared', 'replayed', 'loved'],
+    enum: ['viewed', 'saved', 'reflected', 'shared', 'replayed', 'loved', 'played', 'view', 'love', 'save', 'share'],
     description: 'Type of user interaction logged for ranking heuristics',
   })
   @IsString()
-  @IsIn(['viewed', 'saved', 'reflected', 'shared', 'replayed', 'loved'])
+  @IsIn(['viewed', 'saved', 'reflected', 'shared', 'replayed', 'loved', 'played', 'view', 'love', 'save', 'share'])
   interactionType: string;
 }

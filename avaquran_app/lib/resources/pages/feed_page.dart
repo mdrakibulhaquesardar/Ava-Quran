@@ -4,9 +4,10 @@ import 'package:multiavatar/multiavatar.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import '/resources/widgets/trend_video_card_widget.dart';
 import '/resources/widgets/blog_card_widget.dart';
-import '/resources/pages/peoples_page.dart';
 import '/resources/pages/profile_page.dart';
 import '/resources/pages/blog_details_page.dart';
+import '/resources/pages/video_feed_page.dart';
+import '../../app/networking/api_service.dart';
 
 class FeedPage extends NyStatefulWidget {
   static RouteView path = ("/feed", (_) => FeedPage());
@@ -25,6 +26,9 @@ class _FeedPageState extends NyPage<FeedPage> {
   int _selectedNavTabIndex = 0;
   int _selectedBlogCategoryIndex = 0;
   final List<String> _blogCategories = ["All", "Reflection", "Lifestyle", "Learning", "History", "Kids"];
+
+  List<dynamic> _mostLovedVideos = [];
+  bool _isLoadingLoved = true;
 
   final List<Map<String, String>> _blogs = [
     {
@@ -123,7 +127,41 @@ class _FeedPageState extends NyPage<FeedPage> {
   ];
 
   @override
-  get init => () {};
+  get init => () {
+    _fetchMostLovedData();
+  };
+
+  Future<void> _fetchMostLovedData() async {
+    setState(() {
+      _isLoadingLoved = true;
+    });
+    try {
+      final response = await ApiService().fetchMostLoved(limit: 10);
+      if (response != null && response['data'] != null) {
+        setState(() {
+          _mostLovedVideos = List.from(response['data']);
+        });
+      }
+    } catch (e) {
+      NyLogger.error("Error fetching most loved data: $e");
+    } finally {
+      setState(() {
+        _isLoadingLoved = false;
+      });
+    }
+  }
+
+  String _formatCounter(dynamic count) {
+    if (count == null) return "0";
+    final int numCount = count is int ? count : int.tryParse(count.toString()) ?? 0;
+    if (numCount >= 1000000) {
+      return "${(numCount / 1000000).toStringAsFixed(1)}M";
+    }
+    if (numCount >= 1000) {
+      return "${(numCount / 1000).toStringAsFixed(1)}K";
+    }
+    return numCount.toString();
+  }
 
   @override
   bool get stateManaged => false;
@@ -367,30 +405,61 @@ class _FeedPageState extends NyPage<FeedPage> {
                         ),
                         const SizedBox(height: 12),
 
-                        // HORIZONTAL VIDEO LIST
+                        // HORIZONTAL VIDEO LIST (DYNAMIC REEL CAROUSEL)
                         SizedBox(
                           height: 190,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            children: const [
-                              TrendVideoCard(
-                                title: "The Beauty and of the Holy Quran...",
-                                duration: "5 min",
-                                image: "assets/images/video_1.png",
-                              ),
-                              TrendVideoCard(
-                                title: "The Divine Peace within Nature...",
-                                duration: "7 min",
-                                image: "assets/images/video_2.png",
-                              ),
-                              TrendVideoCard(
-                                title: "Finding Peace through daily Prayers...",
-                                duration: "4 min",
-                                image: "assets/images/onboarding_1.png",
-                              ),
-                            ],
-                          ),
+                          child: _isLoadingLoved
+                              ? const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7FBAB3)),
+                                  ),
+                                )
+                              : _mostLovedVideos.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        "No highlights available yet",
+                                        style: TextStyle(
+                                          color: Colors.grey[500],
+                                          fontStyle: FontStyle.italic,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                                      itemCount: _mostLovedVideos.length,
+                                      itemBuilder: (context, index) {
+                                        final item = _mostLovedVideos[index];
+                                        final background = item["videoBackground"];
+                                        final meta = item["videoMeta"];
+
+                                        final String translation = item["translation"] ?? "Beautiful Reflection";
+                                        final String imageUrl = background?["url"] ?? "";
+                                        final int durationSeconds = meta?["duration"] ?? 30;
+                                        final int likes = meta?["likes"] ?? 0;
+                                        final bool isLoved = item["isLoved"] ?? false;
+
+                                        return TrendVideoCard(
+                                          title: translation,
+                                          image: imageUrl,
+                                          duration: "${durationSeconds}s",
+                                          likes: _formatCounter(likes),
+                                          isLoved: isLoved,
+                                          onTap: () {
+                                            // Navigate directly to the dynamic reel viewer, passing state and index key context!
+                                            routeTo(
+                                              VideoFeedPage.path,
+                                              data: {
+                                                'initialVerseKey': item["verseKey"],
+                                                'preloadedFeed': _mostLovedVideos,
+                                              },
+                                            );
+                                          },
+                                        );
+                                      },
+                                    ),
                         ),
 
                         // PAGINATION DOTS OVERLAY SIMULATED
@@ -486,41 +555,44 @@ class _FeedPageState extends NyPage<FeedPage> {
                             spacing: 10,
                             runSpacing: 10,
                             children: _moods.map((mood) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: mood["color"],
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: (mood["color"] as Color)
-                                          .withAlpha(60),
-                                      blurRadius: 6,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      mood["icon"],
-                                      size: 18,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      mood["name"],
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 14,
+                              return GestureDetector(
+                                onTap: () => routeTo(VideoFeedPage.path, data: mood["name"].toString().toLowerCase()),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: mood["color"],
+                                    borderRadius: BorderRadius.circular(30),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: (mood["color"] as Color)
+                                            .withAlpha(60),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 3),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        mood["icon"],
+                                        size: 18,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        mood["name"],
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             }).toList(),

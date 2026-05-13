@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../app/networking/api_service.dart';
 import '../widgets/ken_burns_media_item.dart';
 
 class VideoFeedPage extends NyStatefulWidget {
@@ -14,47 +18,157 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
   int _currentIndex = 0;
   late PageController _pageController;
 
-  final List<Map<String, String>> _feedItems = [
-    {
-      "imageUrl": "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80",
-      "arabic": "فَإِنَّ مَعَ الْعُسْرِ يُسْرًا",
-      "quote": "“Indeed, with hardship [will be] ease.”",
-      "author": "Surah Ash-Sharh [94:6]",
-      "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    },
-    {
-      "imageUrl": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80",
-      "arabic": "وَوَجَدَكَ ضَالًّا فَهَدَىٰ",
-      "quote": "“And he found you lost and guided [you].”",
-      "author": "Surah Ad-Duha [93:7]",
-      "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-    },
-    {
-      "imageUrl": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80",
-      "arabic": "فَاذْكُرُونِي أَذْكُرْكُمْ",
-      "quote": "“So remember Me; I will remember you.”",
-      "author": "Surah Al-Baqarah [2:152]",
-      "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-    },
-    {
-      "imageUrl": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
-      "arabic": "أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ",
-      "quote": "“Unquestionably, by the remembrance of Allah hearts are assured.”",
-      "author": "Surah Ar-Ra'd [13:28]",
-      "audioUrl": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-    },
-  ];
+  List<dynamic> _feedItems = [];
+  bool _isLoading = true;
+  bool _isFetchingMore = false;
+  int _currentPage = 1;
+  bool _hasMore = true;
+  String _selectedMood = "";
+
+  // 1. UX UX & Tracking enhancements
+  Timer? _viewTimer;
+  final Set<String> _viewedKeysCache = {};
+  bool _isAudioPaused = false;
 
   @override
-  get init => () {
+  get init => () async {
         _audioPlayer = AudioPlayer();
-        _pageController = PageController();
-        // Start playing the first one
-        _playCurrentTrack();
+        
+        final dynamic data = widget.data();
+        String? initialKey;
+        List<dynamic>? preloaded;
+
+        if (data is String) {
+          _selectedMood = data;
+        } else if (data is Map) {
+          _selectedMood = data['mood'] ?? "";
+          initialKey = data['initialVerseKey'];
+          if (data['preloadedFeed'] is List) {
+            preloaded = List.from(data['preloadedFeed']);
+          }
+        }
+
+        // If preloaded feed array supplied (e.g. Most Loved Carousel), hydrate directly without initial api wait
+        if (preloaded != null && preloaded.isNotEmpty) {
+          int targetIdx = 0;
+          if (initialKey != null) {
+            final idx = preloaded.indexWhere((item) => item["verseKey"] == initialKey);
+            if (idx != -1) targetIdx = idx;
+          }
+          
+          _currentIndex = targetIdx;
+          _feedItems = preloaded;
+          _pageController = PageController(initialPage: targetIdx);
+          _isLoading = false;
+          
+          for (var item in _feedItems) {
+            if (item["isViewed"] == true && item["verseKey"] != null) {
+              _viewedKeysCache.add(item["verseKey"]);
+            }
+          }
+          
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+             _playCurrentTrack();
+          });
+        } else {
+          _pageController = PageController();
+          await _fetchInitialFeed();
+        }
       };
+
+  Future<void> _fetchInitialFeed() async {
+    setState(() {
+      _isLoading = true;
+      _feedItems.clear();
+      _currentPage = 1;
+      _hasMore = true;
+    });
+
+    try {
+      final response = await ApiService().fetchFeed(
+        mood: _selectedMood,
+        page: _currentPage,
+        limit: 10,
+      );
+
+      if (response != null && response['data'] != null) {
+        setState(() {
+          _feedItems = List.from(response['data']);
+          _hasMore = response['meta']?['hasMore'] ?? true;
+          
+          // Initialize local session viewed state based on backend history
+          for (var item in _feedItems) {
+            if (item["isViewed"] == true && item["verseKey"] != null) {
+              _viewedKeysCache.add(item["verseKey"]);
+            }
+          }
+        });
+        if (_feedItems.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+             _playCurrentTrack();
+          });
+        }
+      }
+    } catch (e) {
+      NyLogger.error("Error fetching initial feed: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _fetchNextPage() async {
+    if (_isFetchingMore || !_hasMore) return;
+
+    setState(() {
+      _isFetchingMore = true;
+    });
+
+    try {
+      final int nextPage = _currentPage + 1;
+      final response = await ApiService().fetchFeed(
+        mood: _selectedMood,
+        page: nextPage,
+        limit: 10,
+      );
+
+      if (response != null && response['data'] != null) {
+        final List<dynamic> newItems = response['data'];
+        if (newItems.isNotEmpty) {
+          setState(() {
+            _feedItems.addAll(newItems);
+            _currentPage = nextPage;
+            _hasMore = response['meta']?['hasMore'] ?? true;
+            
+            for (var item in newItems) {
+              if (item["isViewed"] == true && item["verseKey"] != null) {
+                _viewedKeysCache.add(item["verseKey"]);
+              }
+            }
+          });
+        } else {
+          setState(() {
+            _hasMore = false;
+          });
+        }
+      }
+    } catch (e) {
+      NyLogger.error("Error fetching next page: $e");
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isFetchingMore = false;
+        });
+      }
+    }
+  }
 
   @override
   void dispose() {
+    _viewTimer?.cancel();
     _audioPlayer.stop();
     _audioPlayer.dispose();
     _pageController.dispose();
@@ -62,17 +176,198 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
   }
 
   Future<void> _playCurrentTrack() async {
+    if (_feedItems.isEmpty || _currentIndex >= _feedItems.length) return;
+
+    // Reset active view timer for the new track
+    _viewTimer?.cancel();
+
     try {
       await _audioPlayer.stop();
-      final url = _feedItems[_currentIndex]["audioUrl"]!;
-      await _audioPlayer.play(UrlSource(url));
-      // Set to loop for immersive vibe
-      await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-      // Set reasonable immersive volume
-      await _audioPlayer.setVolume(0.5);
+      final item = _feedItems[_currentIndex];
+      final String? audioUrl = item["audioUrl"];
+      final String? key = item["verseKey"];
+      
+      setState(() {
+        _isAudioPaused = false;
+      });
+
+      if (audioUrl != null && audioUrl.isNotEmpty) {
+        await _audioPlayer.play(UrlSource(audioUrl));
+        await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+        await _audioPlayer.setVolume(0.4); // Ambient background volume
+        
+        // 2. START VIEW TIMER: ONLY count view if stayed >= 3 seconds
+        if (key != null) {
+          _viewTimer = Timer(const Duration(seconds: 3), () {
+            _onTrackRetainedForThreeSeconds(key, _currentIndex);
+          });
+        }
+      }
     } catch (e) {
       debugPrint("Error playing audio track: $e");
     }
+  }
+
+  void _onTrackRetainedForThreeSeconds(String key, int indexAtTime) {
+    // Verify that we are still viewing the SAME track
+    if (!mounted || _currentIndex != indexAtTime) return;
+    
+    // Avoid duplicative API calls per session using local cache
+    if (_viewedKeysCache.contains(key)) return;
+
+    _viewedKeysCache.add(key);
+    
+    setState(() {
+      // Reflect instantly in local UI
+      if (_currentIndex < _feedItems.length) {
+        final item = _feedItems[_currentIndex];
+        item["isViewed"] = true;
+        
+        // Optimistically boost view count locally!
+        final meta = item["videoMeta"] ?? {};
+        final int views = meta["views"] ?? 0;
+        meta["views"] = views + 1;
+        item["videoMeta"] = meta;
+      }
+    });
+
+    // Fire interaction log in the background
+    _logInteraction(key, "view");
+  }
+
+  Future<void> _togglePlayPause() async {
+    if (_feedItems.isEmpty) return;
+    
+    HapticFeedback.lightImpact();
+    
+    try {
+      if (_isAudioPaused) {
+        await _audioPlayer.resume();
+        setState(() {
+          _isAudioPaused = false;
+        });
+      } else {
+        await _audioPlayer.pause();
+        setState(() {
+          _isAudioPaused = true;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error toggling play/pause: $e");
+    }
+  }
+
+  Future<void> _handleLike(int index) async {
+    if (index < 0 || index >= _feedItems.length) return;
+    final item = _feedItems[index];
+    final String? key = item["verseKey"];
+    if (key == null) return;
+
+    HapticFeedback.mediumImpact();
+    final bool currentLoved = item["isLoved"] ?? false;
+
+    setState(() {
+      // Optimistic State Update
+      item["isLoved"] = !currentLoved;
+      
+      final meta = item["videoMeta"] ?? {};
+      final int rawLikes = meta["likes"] ?? 0;
+      meta["likes"] = currentLoved ? (rawLikes > 0 ? rawLikes - 1 : 0) : rawLikes + 1;
+      item["videoMeta"] = meta;
+    });
+
+    try {
+      await ApiService().trackInteraction(ayahKey: key, interactionType: currentLoved ? "unlike" : "love");
+    } catch (e) {
+      // Silently rollback if network fails
+      if (mounted) {
+        setState(() {
+          item["isLoved"] = currentLoved;
+          final meta = item["videoMeta"] ?? {};
+          final int rawLikes = meta["likes"] ?? 0;
+          meta["likes"] = currentLoved ? rawLikes + 1 : (rawLikes > 0 ? rawLikes - 1 : 0);
+          item["videoMeta"] = meta;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleSave(int index) async {
+    if (index < 0 || index >= _feedItems.length) return;
+    final item = _feedItems[index];
+    final String? key = item["verseKey"];
+    if (key == null) return;
+
+    HapticFeedback.lightImpact();
+    final bool currentSaved = item["isSaved"] ?? false;
+
+    setState(() {
+      item["isSaved"] = !currentSaved;
+    });
+
+    try {
+      await ApiService().trackInteraction(ayahKey: key, interactionType: currentSaved ? "unsave" : "save");
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          item["isSaved"] = currentSaved;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleShare(int index) async {
+    if (index < 0 || index >= _feedItems.length) return;
+    final item = _feedItems[index];
+    final String? key = item["verseKey"];
+    if (key == null) return;
+
+    HapticFeedback.lightImpact();
+    final String translation = item["translation"] ?? "";
+    final String reference = "Surah ${item["chapterNumber"] ?? "?"}:${item["verseNumber"] ?? "?"}";
+
+    // 1. Optimistically boost share count instantly
+    setState(() {
+      final meta = item["videoMeta"] ?? {};
+      final int currentShares = meta["shares"] ?? 0;
+      meta["shares"] = currentShares + 1;
+      item["videoMeta"] = meta;
+    });
+
+    // 2. Fire analytics logging to backend in background
+    _logInteraction(key, "share");
+    
+    // 3. Trigger System Share Dialog via SharePlus
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: "\"$translation\"\n\nQuran $reference\n\nListen to this beautiful reminder on Ava Quran App.",
+        ),
+      );
+    } catch (e) {
+      debugPrint("Failed sharing item: $e");
+    }
+  }
+
+  Future<void> _logInteraction(String? key, String type) async {
+    if (key == null || key.isEmpty) return;
+    try {
+      await ApiService().trackInteraction(ayahKey: key, interactionType: type);
+    } catch (e) {
+      debugPrint("Error logging interaction $type for $key: $e");
+    }
+  }
+
+  String _formatCounter(dynamic count) {
+    if (count == null) return "0";
+    final int numCount = count is int ? count : int.tryParse(count.toString()) ?? 0;
+    if (numCount >= 1000000) {
+      return "${(numCount / 1000000).toStringAsFixed(1)}M";
+    }
+    if (numCount >= 1000) {
+      return "${(numCount / 1000).toStringAsFixed(1)}K";
+    }
+    return numCount.toString();
   }
 
   @override
@@ -81,29 +376,82 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. VERTICAL PAGE VIEW
-          PageView.builder(
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            itemCount: _feedItems.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
-              _playCurrentTrack();
-            },
-            itemBuilder: (context, index) {
-              final item = _feedItems[index];
-              return KenBurnsMediaItem(
-                key: ValueKey(item["imageUrl"]),
-                imageUrl: item["imageUrl"]!,
-                arabic: item["arabic"]!,
-                quote: item["quote"]!,
-                author: item["author"]!,
-                isActive: _currentIndex == index,
-              );
-            },
-          ),
+          // 1. VERTICAL PAGE VIEW BUILDER OR LOADER
+          _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white54),
+                )
+              : _feedItems.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.sentiment_dissatisfied, color: Colors.white38, size: 48),
+                          const SizedBox(height: 16),
+                          const Text(
+                            "No moments found for this selection.",
+                            style: TextStyle(color: Colors.white70, fontSize: 16),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white24,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text("Go Back"),
+                          ),
+                        ],
+                      ),
+                    )
+                  : PageView.builder(
+                      controller: _pageController,
+                      scrollDirection: Axis.vertical,
+                      itemCount: _feedItems.length,
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentIndex = index;
+                        });
+                        _playCurrentTrack();
+
+                        // Smart Preload trigger when reaching last 3 items
+                        if (index >= _feedItems.length - 3) {
+                          _fetchNextPage();
+                        }
+                      },
+                      itemBuilder: (context, index) {
+                        final item = _feedItems[index];
+                        final background = item["videoBackground"];
+                        final meta = item["videoMeta"];
+                        
+                        final String imageUrl = background?["url"] ?? "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+                        final String arabic = item["textUthmani"] ?? "";
+                        final String quote = item["translation"] ?? "";
+                        final String reference = "Surah ${item["chapterNumber"] ?? "?"}:${item["verseNumber"] ?? "?"}";
+                        
+                        return KenBurnsMediaItem(
+                          key: ValueKey("${item["id"] ?? index}"),
+                          imageUrl: imageUrl,
+                          arabic: arabic,
+                          quote: quote,
+                          author: reference,
+                          isActive: _currentIndex == index,
+                          isPaused: _isAudioPaused,
+                          isViewed: item["isViewed"] ?? false,
+                          isLoved: item["isLoved"] ?? false,
+                          isSaved: item["isSaved"] ?? false,
+                          aiInsight: item["aiInsight"],
+                          moodTag: item["moodTag"],
+                          likes: _formatCounter(meta?["likes"]),
+                          views: _formatCounter(meta?["views"]),
+                          shares: _formatCounter(meta?["shares"]),
+                          onLikeTap: () => _handleLike(index),
+                          onSaveTap: () => _handleSave(index),
+                          onShareTap: () => _handleShare(index),
+                          onMainTap: _togglePlayPause,
+                        );
+                      },
+                    ),
 
           // 2. TOP OVERLAY CONTROLS (BACK BUTTON, TITLE)
           SafeArea(
@@ -135,16 +483,18 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.white12),
                     ),
-                    child: const Text(
-                      "Ava Moments",
-                      style: TextStyle(
+                    child: Text(
+                      _selectedMood.isNotEmpty
+                          ? "#${_selectedMood.toUpperCase()}"
+                          : "Ava Moments",
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 40), // Center compensation
+                  const SizedBox(width: 40), // Balancing layout Spacer
                 ],
               ),
             ),

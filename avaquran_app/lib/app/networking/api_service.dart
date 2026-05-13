@@ -109,6 +109,37 @@ class ApiService extends NyApiService {
     );
   }
 
+  /// Fetch paginated, personalized vertical feed
+  Future<dynamic> fetchFeed({String mood = '', int page = 1, int limit = 10}) async {
+    return await network(
+      request: (request) => request.get("/feed", queryParameters: {
+        "mood": mood,
+        "page": page.toString(),
+        "limit": limit.toString(),
+      }),
+    );
+  }
+
+  /// Log analytic signals from frontend (loved, saved, swiped, etc.)
+  Future<dynamic> trackInteraction({required String ayahKey, required String interactionType}) async {
+    return await network(
+      request: (request) => request.post("/feed/interactions", data: {
+        "ayahKey": ayahKey,
+        "interactionType": interactionType,
+      }),
+    );
+  }
+
+  /// Fetch top reels sorted by love engagement DESC
+  Future<dynamic> fetchMostLoved({int limit = 10, String lang = 'en'}) async {
+    return await network(
+      request: (request) => request.get("/feed/most-loved", queryParameters: {
+        "limit": limit.toString(),
+        "lang": lang,
+      }),
+    );
+  }
+
 /* Helpers
   |-------------------------------------------------------------------------- */
 

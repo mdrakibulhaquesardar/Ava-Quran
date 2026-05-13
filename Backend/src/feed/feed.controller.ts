@@ -48,4 +48,20 @@ export class FeedController {
   async logInteraction(@Req() req: any, @Body() dto: CreateInteractionDto) {
     return this.feedService.trackInteraction(req.user.userId, dto);
   }
+
+  @ApiOperation({ summary: 'Get top reels sorted by love engagement DESC' })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'lang', required: false })
+  @Get('most-loved')
+  async getMostLoved(
+    @Req() req: any,
+    @Query('limit') limit: string = '10',
+    @Query('lang') lang: string = 'en',
+  ) {
+    return this.feedService.getMostLoved(
+      req.user.userId,
+      lang,
+      parseInt(limit, 10)
+    );
+  }
 }

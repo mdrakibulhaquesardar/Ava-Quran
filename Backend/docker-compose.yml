@@ -32,15 +32,21 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
     ports:
       - "3000:3000"
     env_file:
       - .env
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: "3000"
       DATABASE_URL: postgresql://ava:ava@postgres:5432/ava_quran?schema=public
       REDIS_URL: redis://redis:6379
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/dist
+    command: sh -c "npx prisma generate && npx prisma db push --accept-data-loss && npm run start:dev"
     depends_on:
       postgres:
         condition: service_healthy
