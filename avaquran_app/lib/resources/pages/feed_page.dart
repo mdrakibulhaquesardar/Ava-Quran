@@ -8,6 +8,7 @@ import '/resources/pages/profile_page.dart';
 import '/resources/pages/blog_details_page.dart';
 import '/resources/pages/video_feed_page.dart';
 import '../../app/networking/api_service.dart';
+import 'package:shimmer/shimmer.dart';
 
 class FeedPage extends NyStatefulWidget {
   static RouteView path = ("/feed", (_) => FeedPage());
@@ -197,15 +198,7 @@ class _FeedPageState extends NyPage<FeedPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        "Ava Qurania", // Updated branding
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.black87,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
+                      Image.asset("assets/images/Icon_text.png", height: 45),
                       Row(
                         children: [
                           _buildCircleIconButton(Icons.add),
@@ -409,11 +402,25 @@ class _FeedPageState extends NyPage<FeedPage> {
                         SizedBox(
                           height: 190,
                           child: _isLoadingLoved
-                              ? const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7FBAB3)),
-                                  ),
+                              ? ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                                  itemCount: 4,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemBuilder: (context, index) {
+                                    return Shimmer.fromColors(
+                                      baseColor: Colors.grey[300]!,
+                                      highlightColor: Colors.grey[100]!,
+                                      child: Container(
+                                        width: 150,
+                                        margin: const EdgeInsets.only(right: 16),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 )
                               : _mostLovedVideos.isEmpty
                                   ? Center(
