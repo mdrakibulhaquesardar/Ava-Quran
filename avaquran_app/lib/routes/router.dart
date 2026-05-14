@@ -1,3 +1,8 @@
+import '/resources/pages/support_feedback_page.dart';
+import '/resources/pages/privacy_security_page.dart';
+import '/resources/pages/prayer_notifications_page.dart';
+import '/resources/pages/app_appearance_page.dart';
+import '/resources/pages/account_info_page.dart';
 import '/resources/pages/create_blog_page.dart';
 import '/resources/pages/collections_page.dart';
 import '/resources/pages/quran_auth_page.dart';
@@ -38,4 +43,9 @@ appRouter() => nyRoutes((router) {
       router.add(QuranAuthPage.path);
       router.add(CreateBlogPage.path);
       router.add(CollectionsPage.path);
+      router.add(AccountInfoPage.path);
+      router.add(AppAppearancePage.path);
+      router.add(PrayerNotificationsPage.path);
+      router.add(PrivacySecurityPage.path);
+      router.add(SupportFeedbackPage.path);
 });

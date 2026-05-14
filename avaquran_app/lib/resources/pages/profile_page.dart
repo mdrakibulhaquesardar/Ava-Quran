@@ -1,4 +1,9 @@
 import 'dart:convert';
+import '/resources/pages/account_info_page.dart';
+import '/resources/pages/app_appearance_page.dart';
+import '/resources/pages/prayer_notifications_page.dart';
+import '/resources/pages/privacy_security_page.dart';
+import '/resources/pages/support_feedback_page.dart';
 import 'package:avaquran_app/app/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
@@ -269,6 +274,7 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                             title: "Account Information",
                             subtitle: "Manage your profile data",
                             isFirst: true,
+                            onTap: () => routeTo(AccountInfoPage.path),
                           ),
                           _buildTileDivider(),
                           _buildSettingTile(
@@ -284,6 +290,7 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                             color: Colors.teal.shade400,
                             title: "App Appearance",
                             subtitle: "Dark mode & Theme triggers",
+                            onTap: () => routeTo(AppAppearancePage.path),
                           ),
                           _buildTileDivider(),
                           _buildSettingTile(
@@ -291,6 +298,7 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                             color: Colors.orange.shade400,
                             title: "Prayer Notifications",
                             subtitle: "Configure daily Adhan reminders",
+                            onTap: () => routeTo(PrayerNotificationsPage.path),
                           ),
                           _buildTileDivider(),
                           _buildSettingTile(
@@ -298,6 +306,7 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                             color: Colors.purple.shade400,
                             title: "Privacy & Security",
                             subtitle: "Passwords & Verification",
+                            onTap: () => routeTo(PrivacySecurityPage.path),
                           ),
                           _buildTileDivider(),
                           _buildSettingTile(
@@ -306,6 +315,7 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                             title: "Support & Feedback",
                             subtitle: "Reach the Ava Team",
                             isLast: true,
+                            onTap: () => routeTo(SupportFeedbackPage.path),
                           ),
                         ],
                       ),

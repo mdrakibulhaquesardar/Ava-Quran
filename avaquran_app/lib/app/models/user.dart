@@ -6,6 +6,8 @@ class User extends Model {
   String? email;
   String? avatar;
   String? quranId;
+  String? username;
+  String? bio;
   int followersCount = 0;
   int followingCount = 0;
   int currentStreak = 0;
@@ -20,6 +22,8 @@ class User extends Model {
     email = data['email'];
     avatar = data['avatar'];
     quranId = data['quranId'];
+    username = data['username'];
+    bio = data['bio'];
     followersCount = data['followersCount'] ?? 0;
     followingCount = data['followingCount'] ?? 0;
     
@@ -35,6 +39,9 @@ class User extends Model {
     "name": name, 
     "email": email, 
     "avatar": avatar,
+    "quranId": quranId,
+    "username": username,
+    "bio": bio,
     "followersCount": followersCount,
     "followingCount": followingCount,
     "currentStreak": currentStreak,
