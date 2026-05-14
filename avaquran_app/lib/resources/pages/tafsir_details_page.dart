@@ -168,13 +168,37 @@ class _TafsirDetailsPageState extends NyPage<TafsirDetailsPage> {
                   color: const Color(0xFF267B92).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
-                  "Verse ${item['verse_key'] ?? item['verse_number']}",
-                  style: const TextStyle(
-                    color: Color(0xFF267B92),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "Verse ${item['verse_key'] ?? item['verse_number']}",
+                      style: const TextStyle(
+                        color: Color(0xFF267B92),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 12,
+                      width: 1,
+                      color: const Color(0xFF267B92).withOpacity(0.3),
+                    ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: () => _showWordAnalysis(item['verse_key'] ?? item['verse_number'].toString()),
+                      child: const Text(
+                        "Word Analysis",
+                        style: TextStyle(
+                          color: Color(0xFF267B92),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),
@@ -199,6 +223,168 @@ class _TafsirDetailsPageState extends NyPage<TafsirDetailsPage> {
                 textDecoration: TextDecoration.none,
               ),
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showWordAnalysis(String ayahKey) async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.isThemeDark ? const Color(0xFF03141C) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          expand: false,
+          builder: (context, scrollController) {
+            return FutureBuilder<dynamic>(
+              future: QuranApiService().fetchWordMorphology(ayahKey: ayahKey),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFF267B92)));
+                }
+                
+                if (snapshot.hasError || snapshot.data == null) {
+                  return const Center(child: Text("Could not load word analysis."));
+                }
+
+                final words = snapshot.data['verse']['words'] as List;
+                
+                return Column(
+                  children: [
+                    const SizedBox(height: 15),
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.translate, color: Color(0xFF267B92), size: 20),
+                          const SizedBox(width: 10),
+                          Text(
+                            "Word Analysis - $ayahKey",
+                            style: TextStyle(
+                              fontSize: 18, 
+                              fontWeight: FontWeight.bold,
+                              color: context.isThemeDark ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        controller: scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: words.length,
+                        itemBuilder: (context, index) {
+                          final word = words[index];
+                          if (word['text_uthmani'] == null) return const SizedBox.shrink();
+                          
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 15),
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(
+                              color: context.isThemeDark ? const Color(0xFF0A232F) : const Color(0xFFF8FAFB),
+                              borderRadius: BorderRadius.circular(15),
+                              border: Border.all(
+                                color: context.isThemeDark ? Colors.white.withOpacity(0.05) : const Color(0xFFE8EEF2),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      word['text_uthmani'] ?? "",
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontFamily: 'Amiri', // Assuming you have a Quran font or use default
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF267B92),
+                                      ),
+                                      textDirection: TextDirection.rtl,
+                                    ),
+                                    Text(
+                                      word['translation'] is Map ? (word['translation']['text'] ?? "") : (word['translation'] ?? ""),
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: context.isThemeDark ? Colors.white70 : Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 20),
+                                if (word['root'] != null)
+                                  _buildInfoRow("Root", word['root'], context),
+                                if (word['lemma'] != null)
+                                  _buildInfoRow("Lemma", word['lemma'], context),
+                                if (word['grammatical_features'] != null && word['grammatical_features']['part_of_speech'] != null)
+                                  _buildInfoRow("Part of Speech", word['grammatical_features']['part_of_speech'].toString().capitalize(), context),
+                                if (word['description'] != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      word['description'],
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: context.isThemeDark ? Colors.white54 : Colors.grey[700],
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Text(
+            "$label: ",
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: context.isThemeDark ? Colors.white38 : Colors.black45,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              color: context.isThemeDark ? Colors.white70 : Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

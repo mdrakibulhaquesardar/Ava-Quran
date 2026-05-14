@@ -84,6 +84,21 @@ class QuranApiService extends NyApiService {
     NyLogger.debug("fetchTafsirByChapter Response: $response");
     return response;
   }
+
+  /// Fetch word-by-word morphological analysis for a verse
+  /// https://api-docs.quran.foundation/docs/word_morphology/get-word-morphology/
+  Future<dynamic> fetchWordMorphology({
+    required String ayahKey,
+  }) async {
+    final response = await network(
+      request: (request) => request.get("/verses/by_key/$ayahKey", queryParameters: {
+        "words": "true",
+        "word_fields": "text_uthmani,text_simple,root,lemma,grammatical_features",
+      }),
+    );
+    NyLogger.debug("fetchWordMorphology Response: $response");
+    return response;
+  }
 }
 
 class _QuranAuthInterceptor extends Interceptor {
@@ -95,7 +110,8 @@ class _QuranAuthInterceptor extends Interceptor {
 
     // Skip x-auth-token for public content resources to avoid 403 or 400 errors
     bool isPublicResource = options.path.contains("resources") || 
-                           options.path.contains("tafsirs");
+                           options.path.contains("tafsirs") ||
+                           options.path.contains("verses");
 
     if (token != null && token.isNotEmpty && !isPublicResource) {
       options.headers["x-auth-token"] = token;
