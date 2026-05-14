@@ -306,10 +306,10 @@ export class FeedService {
     };
   }
 
-  async getMostLoved(userId: string, lang: string = 'en', limit: number = 10) {
+  async getMostLoved(userId: string, lang: string = 'en', page: number = 1, limit: number = 10) {
     const translationId = this.languageMap[lang.toLowerCase()] || 85;
 
-    // 1. Gather absolute unique keys pool
+    // 1. Gather absolute unique keys pool from moodMap
     const allKeysSet = new Set<string>(this.defaultKeys);
     Object.values(this.moodMap).forEach((keys) => {
       keys.forEach((k) => allKeysSet.add(k));
@@ -336,9 +336,33 @@ export class FeedService {
       return likesB - likesA;
     });
 
-    // 4. Trim to user defined limit
+    // 4. Handle Pagination
+    const startIndex = (page - 1) * limit;
+    const pagedResults = hydratedPool.slice(startIndex, startIndex + limit);
+
+    // 5. SEAMLESS BACKFILL: If paged list is shorter than limit, inject random items
+    const remaining = limit - pagedResults.length;
+    if (remaining > 0) {
+      const fillPromises = Array.from({ length: remaining }).map(async () => {
+        try {
+          const content = await this.quranService.getRandomVerse(translationId);
+          return await this.enrichFeedItem(content, 'discovery', content.verseKey, userId);
+        } catch (e) {
+          return null;
+        }
+      });
+      const fillResults = (await Promise.all(fillPromises)).filter(Boolean);
+      pagedResults.push(...fillResults as any[]);
+    }
+
     return {
-      data: hydratedPool.slice(0, limit),
+      data: pagedResults,
+      meta: {
+        total: Math.max(hydratedPool.length, page * limit),
+        page,
+        limit,
+        hasMore: true,
+      }
     };
   }
 }

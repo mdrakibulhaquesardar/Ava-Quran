@@ -389,61 +389,65 @@ class _KenBurnsMediaItemState extends State<KenBurnsMediaItem>
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 40),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (widget.moodTag != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(40),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.white.withAlpha(60), width: 1),
-                            ),
-                            child: Text(
-                              "#${widget.moodTag!.toUpperCase()}",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1,
+                    child: SingleChildScrollView(
+                      primary: false,
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.moodTag != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(40),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.white.withAlpha(60), width: 1),
+                              ),
+                              child: Text(
+                                "#${widget.moodTag!.toUpperCase()}",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        if (widget.aiInsight != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withAlpha(100),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white10),
-                            ),
-                            child: Text(
-                              widget.aiInsight!,
-                              style: TextStyle(
-                                color: Colors.white.withAlpha(230),
-                                fontSize: 13,
-                                fontStyle: FontStyle.italic,
-                                height: 1.4,
+                            const SizedBox(height: 12),
+                          ],
+                          if (widget.aiInsight != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withAlpha(100),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.white10),
+                              ),
+                              child: Text(
+                                widget.aiInsight!,
+                                style: TextStyle(
+                                  color: Colors.white.withAlpha(230),
+                                  fontSize: 13,
+                                  fontStyle: FontStyle.italic,
+                                  height: 1.4,
+                                ),
                               ),
                             ),
+                            const SizedBox(height: 12),
+                          ],
+                          Text(
+                            widget.author,
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(180),
+                              fontSize: 14,
+                              letterSpacing: 0.5,
+                              fontWeight: FontWeight.w800,
+                              shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
+                            ),
                           ),
-                          const SizedBox(height: 12),
                         ],
-                        Text(
-                          widget.author,
-                          style: TextStyle(
-                            color: Colors.white.withAlpha(180),
-                            fontSize: 14,
-                            letterSpacing: 0.5,
-                            fontWeight: FontWeight.w800,
-                            shadows: const [Shadow(color: Colors.black87, blurRadius: 6)],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),

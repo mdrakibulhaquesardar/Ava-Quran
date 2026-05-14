@@ -24,6 +24,7 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
   int _currentPage = 1;
   bool _hasMore = true;
   String _selectedMood = "";
+  String _feedType = "general"; // New: tracking the source of the feed (general, most_loved, etc.)
 
   // 1. UX UX & Tracking enhancements
   Timer? _viewTimer;
@@ -42,6 +43,7 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
           _selectedMood = data;
         } else if (data is Map) {
           _selectedMood = data['mood'] ?? "";
+          _feedType = data['feedType'] ?? "general";
           initialKey = data['initialVerseKey'];
           if (data['preloadedFeed'] is List) {
             preloaded = List.from(data['preloadedFeed']);
@@ -129,11 +131,20 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
 
     try {
       final int nextPage = _currentPage + 1;
-      final response = await ApiService().fetchFeed(
-        mood: _selectedMood,
-        page: nextPage,
-        limit: 10,
-      );
+      dynamic response;
+       
+      if (_feedType == "most_loved") {
+        response = await ApiService().fetchMostLoved(
+          page: nextPage,
+          limit: 10,
+        );
+      } else {
+        response = await ApiService().fetchFeed(
+          mood: _selectedMood,
+          page: nextPage,
+          limit: 10,
+        );
+      }
 
       if (response != null && response['data'] != null) {
         final List<dynamic> newItems = response['data'];
@@ -629,6 +640,7 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
                   : PageView.builder(
                       controller: _pageController,
                       scrollDirection: Axis.vertical,
+                      physics: const BouncingScrollPhysics(),
                       itemCount: _feedItems.length,
                       onPageChanged: (index) {
                         setState(() {
@@ -642,35 +654,28 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
                         }
                       },
                       itemBuilder: (context, index) {
-                        final item = _feedItems[index];
-                        final background = item["videoBackground"];
-                        final meta = item["videoMeta"];
-                        
-                        final String imageUrl = background?["url"] ?? "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
-                        final String arabic = item["textUthmani"] ?? "";
-                        final String quote = item["translation"] ?? "";
-                        final String reference = "Surah ${item["chapterNumber"] ?? "?"}:${item["verseNumber"] ?? "?"}";
-                        
-                        return KenBurnsMediaItem(
-                          key: ValueKey("${item["id"] ?? index}"),
-                          imageUrl: imageUrl,
-                          arabic: arabic,
-                          quote: quote,
-                          author: reference,
-                          isActive: _currentIndex == index,
-                          isPaused: _isAudioPaused,
-                          isViewed: item["isViewed"] ?? false,
-                          isLoved: item["isLoved"] ?? false,
-                          isSaved: item["isSaved"] ?? false,
-                          aiInsight: item["aiInsight"],
-                          moodTag: item["moodTag"],
-                          likes: _formatCounter(meta?["likes"]),
-                          views: _formatCounter(meta?["views"]),
-                          shares: _formatCounter(meta?["shares"]),
-                          onLikeTap: () => _handleLike(index),
-                          onSaveTap: () => _handleSave(index),
-                          onShareTap: () => _handleShare(index),
-                          onMainTap: _togglePlayPause,
+                        return AnimatedBuilder(
+                          animation: _pageController,
+                          builder: (context, child) {
+                            double value = 1.0;
+                            if (_pageController.position.haveDimensions) {
+                              value = _pageController.page! - index;
+                              // Calculate scale and opacity based on distance from center
+                              value = (1 - (value.abs() * 0.12)).clamp(0.0, 1.0);
+                            } else {
+                              // Initial state before dimensions are ready
+                              value = (index == _currentIndex) ? 1.0 : 0.88;
+                            }
+                            
+                            return Transform.scale(
+                              scale: Curves.easeOutCubic.transform(value),
+                              child: Opacity(
+                                opacity: Curves.easeInQuad.transform(value),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: _buildVideoItem(index),
                         );
                       },
                     ),
@@ -723,6 +728,38 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
           ),
         ],
       ),
+    );
+  }
+  Widget _buildVideoItem(int index) {
+    final item = _feedItems[index];
+    final background = item["videoBackground"];
+    final meta = item["videoMeta"];
+    
+    final String imageUrl = background?["url"] ?? "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80";
+    final String arabic = item["textUthmani"] ?? "";
+    final String quote = item["translation"] ?? "";
+    final String reference = "Surah ${item["chapterNumber"] ?? "?"}:${item["verseNumber"] ?? "?"}";
+    
+    return KenBurnsMediaItem(
+      key: ValueKey("${item["id"] ?? index}"),
+      imageUrl: imageUrl,
+      arabic: arabic,
+      quote: quote,
+      author: reference,
+      isActive: _currentIndex == index,
+      isPaused: _isAudioPaused,
+      isViewed: item["isViewed"] ?? false,
+      isLoved: item["isLoved"] ?? false,
+      isSaved: item["isSaved"] ?? false,
+      aiInsight: item["aiInsight"],
+      moodTag: item["moodTag"],
+      likes: _formatCounter(meta?["likes"]),
+      views: _formatCounter(meta?["views"]),
+      shares: _formatCounter(meta?["shares"]),
+      onLikeTap: () => _handleLike(index),
+      onSaveTap: () => _handleSave(index),
+      onShareTap: () => _handleShare(index),
+      onMainTap: _togglePlayPause,
     );
   }
 }

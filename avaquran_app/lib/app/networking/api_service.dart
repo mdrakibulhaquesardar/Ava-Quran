@@ -125,9 +125,10 @@ class ApiService extends NyApiService {
   }
 
   /// Fetch top reels sorted by love engagement DESC
-  Future<dynamic> fetchMostLoved({int limit = 10, String lang = 'en'}) async {
+  Future<dynamic> fetchMostLoved({int page = 1, int limit = 10, String lang = 'en'}) async {
     return await network(
       request: (request) => request.get("/feed/most-loved", queryParameters: {
+        "page": page.toString(),
         "limit": limit.toString(),
         "lang": lang,
       }),

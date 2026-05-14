@@ -598,6 +598,7 @@ class _FeedPageState extends NyPage<FeedPage> {
                                               data: {
                                                 'initialVerseKey': item["verseKey"],
                                                 'preloadedFeed': _mostLovedVideos,
+                                                'feedType': 'most_loved',
                                               },
                                             );
                                           },
