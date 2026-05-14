@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '/config/app.dart';
@@ -38,17 +40,33 @@ class Boot {
           bool isSessionValid = false;
 
           if (activeToken != null && activeToken.isNotEmpty) {
+            // 1. Immediate cold-boot recovery from local cache
+            String? userData = prefs.getString('SK_USER_DATA');
+            if (userData != null && userData.isNotEmpty) {
+              try {
+                final dynamic userMap = jsonDecode(userData);
+                await Auth.authenticate(data: userMap);
+                NyLogger.debug("[Boot] User profile restored from local cache.");
+              } catch (e) {
+                await Auth.authenticate(data: {"access_token": activeToken});
+              }
+            } else {
+              await Auth.authenticate(data: {"access_token": activeToken});
+            }
+
             try {
-              // Explicitly verify the token by fetching current user profile
+              // 2. Background verification & synchronization with server
               dynamic profile = await ApiService().fetchCurrentUser(bearerToken: activeToken);
               if (profile != null) {
                 final Map<String, dynamic> userMap = Map<String, dynamic>.from(profile);
                 userMap['access_token'] = activeToken;
                 
-                // Fully synchronize with Nylo Auth layer
                 await Auth.authenticate(data: userMap);
+                // Refresh the local cache with latest server data
+                await prefs.setString('SK_USER_DATA', jsonEncode(userMap));
+                
                 isSessionValid = true;
-                NyLogger.debug("[Boot] Session Validated for user: ${userMap['email']}");
+                NyLogger.debug("[Boot] Session Synchronized for user: ${userMap['email']}");
               } else {
                 throw Exception("Invalid profile payload");
               }

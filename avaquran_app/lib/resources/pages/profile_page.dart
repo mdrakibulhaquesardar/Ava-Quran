@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:avaquran_app/app/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
@@ -17,35 +18,72 @@ class ProfilePage extends NyStatefulWidget {
 }
 
 class _ProfilePageState extends NyPage<ProfilePage> {
-  dynamic _user;
+  User? _user;
 
   @override
-  get init => () {
+  boot() async {
     _user = _safeAuthData();
-  };
+    _refreshProfile();
+  }
+
+  /// Fetches fresh user data from server to update stats (streak, followers etc)
+  Future<void> _refreshProfile() async {
+    User? freshUser = await api<ApiService>((request) => request.fetchCurrentUser());
+    if (freshUser != null) {
+      setState(() {
+        _user = freshUser;
+      });
+      // Sync back to local storage
+      await Auth.authenticate(data: freshUser);
+      await StorageKeysConfig.user.save(jsonEncode(freshUser.toJson()));
+    }
+  }
+
+  /// Helper to format large numbers (e.g. 19400 -> 19.4K)
+  String _formatCount(int count) {
+    if (count < 1000) return count.toString();
+    if (count < 1000000) {
+      double k = count / 1000;
+      return "${k.toStringAsFixed(k < 10 ? 1 : 0)}K";
+    }
+    return count.toString();
+  }
 
   /// Safely resolve dynamic cache state even if returned as encoded serialized JSON
-  dynamic _safeAuthData() {
+  User? _safeAuthData() {
     final dynamic rawData = Auth.data();
     if (rawData == null) return null;
-    if (rawData is String && rawData.trim().startsWith("{")) {
+    
+    // If it's already a User model, return it directly
+    if (rawData is User) {
+      return rawData;
+    }
+    
+    Map<String, dynamic>? data;
+    if (rawData is Map) {
+      data = Map<String, dynamic>.from(rawData);
+    } else if (rawData is String && rawData.trim().startsWith("{")) {
       try {
-         return jsonDecode(rawData);
+         data = jsonDecode(rawData);
       } catch (e) {
-         return rawData; // Failback
+         return null;
       }
     }
-    return rawData;
+    
+    if (data != null) {
+      return User.fromJson(data);
+    }
+    return null;
   }
 
   @override
   Widget view(BuildContext context) {
-    // ULTIMATE SHIELD: Safely extract properties into scope variables to guarantee 0% crash risk
-    final bool isValidMap = _user != null && _user is Map;
-    final String userName = isValidMap ? (_user['name'] ?? "Ava User") : "Ava User";
-    final String userEmail = isValidMap ? (_user['email'] ?? "No email available") : "No email available";
-    final dynamic userQuranId = isValidMap ? _user['quranId'] : null;
-    final String avatarSeed = isValidMap ? (_user['name'] ?? _user['email'] ?? "Unknown User") : "Unknown User";
+    // RESOLVE: Get the typed user model either from state or fresh from storage
+    final User? user = _user ?? _safeAuthData();
+    
+    final String userName = user?.name ?? "Ava User";
+    final String userEmail = user?.email ?? "No email available";
+    final String avatarSeed = user?.avatar ?? user?.name ?? user?.email ?? "Unknown User";
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FBFA), // Premium soft offwhite
@@ -187,17 +225,17 @@ class _ProfilePageState extends NyPage<ProfilePage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // STATS ROW (MAINTAINED)
+                  // STATS ROW (REAL DATA)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _buildStatItem("25", "DaysStreak"),
+                        _buildStatItem("${user?.currentStreak ?? 0}", "DaysStreak"),
                         _buildDivider(),
-                        _buildStatItem("19.4K", "Followers"),
+                        _buildStatItem(_formatCount(user?.followersCount ?? 0), "Followers"),
                         _buildDivider(),
-                        _buildStatItem("12", "Following"),
+                        _buildStatItem("${user?.followingCount ?? 0}", "Following"),
                       ],
                     ),
                   ),

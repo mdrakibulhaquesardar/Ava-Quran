@@ -64,9 +64,9 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: 'Follow a specific community member' })
-  @Post('follow')
-  async followUser(@Req() req: any, @Body() body: { targetUserId: string }) {
-    return this.usersService.followUser(req.user.userId, body.targetUserId);
+  @Post('follow/:targetUserId')
+  async followUser(@Req() req: any, @Param('targetUserId') targetUserId: string) {
+    return this.usersService.followUser(req.user.userId, targetUserId);
   }
 
   @ApiOperation({ summary: 'Unfollow a community member' })

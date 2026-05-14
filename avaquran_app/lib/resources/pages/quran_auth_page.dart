@@ -137,6 +137,9 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
             // Unify local user profile data inside the global Nylo Auth lifecycle
             await Auth.authenticate(data: userMap);
             
+            // Persist full user JSON for instant cold-boot recovery
+            await StorageKeysConfig.user.save(jsonEncode(userMap));
+            
             // 3. Uphold local device tracking directive: Check if we are already onboarded on device
             hasOnboarded = await StorageKeysConfig.onboardingComplete.read() == true;
             
@@ -235,6 +238,9 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
           final Map<String, dynamic> userMap = Map<String, dynamic>.from(response['user']);
           userMap['access_token'] = response['access_token'];
           await Auth.authenticate(data: userMap);
+          
+          // Persist full user JSON for instant cold-boot recovery
+          await StorageKeysConfig.user.save(jsonEncode(userMap));
           
           // Retain previous local device tracking states if they exist
           bool hasOnboarded = prefs.getBool('SK_ONBOARDING_COMPLETE') == true;

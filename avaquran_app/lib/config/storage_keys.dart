@@ -29,7 +29,7 @@ final class StorageKeysConfig {
   
   static final StorageKey onboardingComplete = 'SK_ONBOARDING_COMPLETE';
 
-  // static final StorageKey coins = 'SK_COINS';
+  static final StorageKey user = 'SK_USER_DATA';
 
   /// Add your storage keys here...
 }

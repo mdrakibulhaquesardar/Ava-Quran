@@ -21,7 +21,10 @@ export class UsersService {
   async findOneById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { id },
-    });
+      include: {
+        streak: true,
+      },
+    }) as any;
   }
 
   async createUser(data: Prisma.UserCreateInput): Promise<User> {

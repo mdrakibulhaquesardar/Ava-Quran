@@ -6,10 +6,12 @@ import 'package:intl/intl.dart';
 
 class BlogCard extends StatefulWidget {
   final dynamic blog;
+  final String heroPrefix;
 
   const BlogCard({
     super.key,
     required this.blog,
+    this.heroPrefix = 'blog-list',
   });
 
   @override
@@ -61,7 +63,7 @@ class _BlogCardState extends NyState<BlogCard> {
           children: [
             // 1. HERO IMAGE THUMBNAIL
             Hero(
-              tag: "blog-image-$id",
+              tag: "${widget.heroPrefix}-image-$id",
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
