@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '/config/storage_keys.dart';
 import '/config/app.dart';
 import '/bootstrap/decoders.dart';
@@ -15,22 +16,15 @@ class ApiService extends NyApiService {
       : super(
           decoders: modelDecoders,
           useNetworkLogger: true,
-          // baseOptions: (BaseOptions baseOptions) {
-          //   return baseOptions
-          //             ..connectTimeout = Duration(seconds: 5)
-          //             ..sendTimeout = Duration(seconds: 5)
-          //             ..receiveTimeout = Duration(seconds: 5);
-          // },
         );
 
   @override
-  String get baseUrl => getEnv('API_BASE_URL');
+  Map<Type, Interceptor> get interceptors => {
+    _AuthInterceptor: _AuthInterceptor(),
+  };
 
   @override
-  Map<Type, Interceptor> get interceptors => {
-    ...super.interceptors,
-    // MyCustomInterceptor: MyCustomInterceptor(),
-  };
+  String get baseUrl => getEnv('API_BASE_URL');
 
   /// Authenticate a user and receive token
   Future<dynamic> loginUser({required String email, required String password}) async {
@@ -153,9 +147,7 @@ class ApiService extends NyApiService {
   /// Follow a user by their ID
   Future<dynamic> followUser({required String targetUserId}) async {
     return await network(
-      request: (request) => request.post("/users/follow", data: {
-        "targetUserId": targetUserId,
-      }),
+      request: (request) => request.post("/users/follow/$targetUserId"),
     );
   }
 
@@ -231,24 +223,6 @@ class ApiService extends NyApiService {
     );
   }
 
-/* Helpers
-  |-------------------------------------------------------------------------- */
-
-  /* Authentication Headers
-  |--------------------------------------------------------------------------
-  | Set your auth headers
-  | Authenticate your API requests using a bearer token or any other method
-  |-------------------------------------------------------------------------- */
-
-  @override
-  Future<RequestHeaders> setAuthHeaders(RequestHeaders headers) async {
-    String? myAuthToken = await StorageKeysConfig.bearerToken.read();
-    if (myAuthToken != null) {
-      headers.addBearerToken(myAuthToken);
-    }
-    return headers;
-  }
-
   /* Should Refresh Token
   |--------------------------------------------------------------------------
   | Check if your Token should be refreshed
@@ -308,5 +282,26 @@ class ApiService extends NyApiService {
       await StorageKeysConfig.bearerToken.save(null);
       await StorageKeysConfig.refreshToken.save(null);
     }
+  }
+}
+
+class _AuthInterceptor extends Interceptor {
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+    NyLogger.debug("[Interceptor] Processing request: ${options.path}");
+    
+    // 1. Read token directly from native SharedPreferences for reliability
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('SK_BEARER_TOKEN');
+    
+    // 2. Inject Bearer token if present
+    if (token != null && token.isNotEmpty) {
+      options.headers["Authorization"] = "Bearer $token";
+      NyLogger.debug("[Interceptor] SUCCESS: Injected token for ${options.path}");
+    } else {
+      NyLogger.debug("[Interceptor] WARNING: No token found in SharedPreferences for ${options.path}");
+    }
+
+    return handler.next(options);
   }
 }

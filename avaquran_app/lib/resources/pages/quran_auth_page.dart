@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -76,6 +77,7 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
     // Detect if URL is finalized back into our backend domain callback
     if (url.contains("/auth/quran/callback")) {
       _isHandlingCallback = true;
+      NyLogger.debug("[OAuth] Callback detected: $url");
       setState(() => _isLoading = true); // Show spinner while parsing final result
       
       try {
@@ -115,11 +117,16 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
         final response = jsonDecode(rawString);
 
         if (response != null && response['access_token'] != null) {
-          // 1. Commit durable tokens
-          await StorageKeysConfig.bearerToken.save(response['access_token']);
+          // 1. Commit durable tokens using direct SharedPreferences for maximum reliability
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString('SK_BEARER_TOKEN', response['access_token']);
           if (response['refresh_token'] != null) {
-             await StorageKeysConfig.refreshToken.save(response['refresh_token']);
+             await prefs.setString('SK_REFRESH_TOKEN', response['refresh_token']);
           }
+          
+          NyLogger.debug("[OAuth] Token stored via SharedPreferences. Verifying...");
+          String? check = prefs.getString('SK_BEARER_TOKEN');
+          NyLogger.debug("[OAuth] SharedPreferences verification: ${check != null ? 'SUCCESS' : 'FAILED'}");
 
           // 2. Commit user meta and retrieve onboarding flag
           bool hasOnboarded = false;
@@ -203,8 +210,10 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
       final dynamic routeData = widget.data();
       final bool isLinking = widget.isLinking || (routeData != null && routeData['isLinking'] == true);
       
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      
       if (isLinking) {
-        currentToken = await StorageKeysConfig.bearerToken.read();
+        currentToken = prefs.getString('SK_BEARER_TOKEN');
       }
 
       // Execute standard network transaction bypassing web browser runtime
@@ -215,10 +224,10 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
       );
 
       if (response != null && response['access_token'] != null) {
-        // 1. Commit durable auth tokens
-        await StorageKeysConfig.bearerToken.save(response['access_token']);
+        // 1. Commit durable auth tokens via direct SharedPreferences
+        await prefs.setString('SK_BEARER_TOKEN', response['access_token']);
         if (response['refresh_token'] != null) {
-          await StorageKeysConfig.refreshToken.save(response['refresh_token']);
+          await prefs.setString('SK_REFRESH_TOKEN', response['refresh_token']);
         }
 
         // 2. Persist global user ecosystem state
@@ -228,9 +237,9 @@ class _QuranAuthPageState extends NyPage<QuranAuthPage> {
           await Auth.authenticate(data: userMap);
           
           // Retain previous local device tracking states if they exist
-          bool hasOnboarded = await StorageKeysConfig.onboardingComplete.read() == true;
+          bool hasOnboarded = prefs.getBool('SK_ONBOARDING_COMPLETE') == true;
           if (hasOnboarded) {
-            await StorageKeysConfig.onboardingComplete.save(true);
+            await prefs.setBool('SK_ONBOARDING_COMPLETE', true);
           }
         }
 

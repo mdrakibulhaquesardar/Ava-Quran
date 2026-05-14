@@ -61,6 +61,8 @@ export class AuthService {
   async generateToken(user: Partial<User>) {
     if (!user.id) throw new UnauthorizedException('Authentication failure: Incomplete payload');
     const payload = { sub: user.id, email: user.email };
+    console.log(`[Auth] Generating JWT for User: ${user.id} (${user.email || 'No Email'})`);
+    
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = randomUUID();
 
@@ -129,7 +131,7 @@ export class AuthService {
       client_id: clientId || '',
       redirect_uri: finalUri,
       response_type: 'code',
-      scope: 'openid offline_access',
+      scope: 'openid offline_access bookmark collection',
       state: finalState,
     };
     if (loginHint) {

@@ -13,18 +13,17 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @ApiOperation({ summary: 'Register a new user with email and password' })
+  @ApiOperation({ summary: 'Register a new user (Internal/Legacy Support)' })
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
-  @ApiOperation({ summary: 'Log in with email and password' })
+  @ApiOperation({ summary: 'Log in with credentials (Internal/Legacy Support)' })
   @UseGuards(LocalAuthGuard)
   @ApiBody({ type: LoginDto })
   @Post('login')
   async login(@Req() req: any) {
-    // LocalAuthGuard attaches 'user' object from LocalStrategy validate
     return this.authService.login(req.user);
   }
 
@@ -43,7 +42,7 @@ export class AuthController {
     return { success: true, message: 'Logged out successfully' };
   }
 
-  @ApiOperation({ summary: 'Redirect user to Quran.Foundation login' })
+  @ApiOperation({ summary: 'Redirect user to Quran.Foundation login (Primary Login Method)' })
   @ApiQuery({ name: 'redirectUri', required: false, description: 'Custom frontend redirect URL after successful OAuth' })
   @Get('quran/login')
   quranLogin(@Req() req: any, @Query('redirectUri') queryRedirect: string, @Res() res: Response) {

@@ -52,12 +52,12 @@ export class QuranSyncService {
     }
 
     const makeCall = (t: string) => {
-      const url = `\${this.baseSyncUrl}\${endpoint}`;
+      const url = `${this.baseSyncUrl}${endpoint}`;
       const headers = {
         'x-auth-token': t,
         'x-client-id': this.clientId,
       };
-      console.log(`[Sync Debug] Initiating \${method.toUpperCase()} request to: \${url}`);
+      console.log(`[Sync Debug] Initiating ${method.toUpperCase()} request to: ${url}`);
       if (method === 'post') {
         return firstValueFrom(this.httpService.post(url, data, { headers }));
       } else {
@@ -66,19 +66,20 @@ export class QuranSyncService {
     };
 
     try {
-      await makeCall(token);
+      const response = await makeCall(token);
+      console.log(`[Sync SUCCESS] URL: ${endpoint} | Status: ${response.status}`);
     } catch (error) {
       const isAuthError = (error as AxiosError)?.response?.status === 401;
       if (isAuthError) {
-        console.log(`[Sync] Received 401 for \${userId}, attempting dynamic token refresh retry...`);
+        console.log(`[Sync] Received 401 for ${userId}, attempting dynamic token refresh retry...`);
         token = await this.authService.refreshUserQuranToken(userId);
         if (token) {
           try {
-            await makeCall(token); // Retry
-            console.log(`[Sync] Retry successful for \${userId}.`);
+            const retryRes = await makeCall(token); // Retry
+            console.log(`[Sync RETRY SUCCESS] URL: ${endpoint} | Status: ${retryRes.status}`);
             return;
           } catch (retryErr) {
-            console.error(`[Sync] Retry failed for \${userId}:`, retryErr.message);
+            console.error(`[Sync RETRY FAILED] URL: ${endpoint} | Status: ${retryErr.response?.status} | Error: ${retryErr.message}`);
             throw retryErr;
           }
         } else {
@@ -88,7 +89,7 @@ export class QuranSyncService {
         const axiosErr = error as AxiosError;
         const errorPayload = axiosErr?.response?.data;
         console.error(
-          `[Sync Error Details] URL: \${this.baseSyncUrl}\${endpoint} | Status: \${axiosErr?.response?.status} | Message:`,
+          `[Sync ERROR] URL: ${endpoint} | Status: ${axiosErr?.response?.status} | Details:`,
           errorPayload || axiosErr.message
         );
         throw error;
@@ -100,7 +101,7 @@ export class QuranSyncService {
     // The official Notes API expects: { body: string, ranges: ["1:1-1:1"] }
     const payload = {
       body: content,
-      ranges: [`\${ayahKey}-\${ayahKey}`],
+      ranges: [`${ayahKey}-${ayahKey}`],
       attachedEntities: [
         {
           entityType: 'reflection',
@@ -109,11 +110,9 @@ export class QuranSyncService {
       ],
     };
     
-    // Wait for request, fire and forget internally to avoid blocking the API response.
-    // Though for reliability, it runs async.
+    console.log(`[Sync] Attempting to sync Reflection for ${ayahKey}...`);
     this.makeAuthenticatedRequest(userId, 'post', '/notes', payload)
-      .then(() => console.log(`[Sync] Successfully synced reflection for ayah \${ayahKey} to cloud.`))
-      .catch(e => console.error('[Sync] Note sync failed:', e.message));
+      .catch(e => console.error('[Sync] Note sync sequence failed internally.'));
   }
 
   async syncCollectionAyahToBookmark(userId: string, ayahKey: string) {
@@ -125,10 +124,11 @@ export class QuranSyncService {
       type: 'ayah',
       key: parseInt(parts[0], 10),
       verseNumber: parseInt(parts[1], 10),
+      mushafId: 1, // Standard Mushaf
     };
 
+    console.log(`[Sync] Attempting to sync Bookmark for ${ayahKey} with mushafId: 1...`);
     this.makeAuthenticatedRequest(userId, 'post', '/collections/__default__/bookmarks', payload)
-      .then(() => console.log(`[Sync] Successfully synced bookmark for ayah \${ayahKey} to cloud.`))
-      .catch(e => console.error('[Sync] Bookmark sync failed:', e.message));
+      .catch(e => console.error('[Sync] Bookmark sync sequence failed internally.'));
   }
 }
