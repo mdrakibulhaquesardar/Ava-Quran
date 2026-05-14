@@ -27,8 +27,10 @@ class User extends Model {
     followersCount = data['followersCount'] ?? 0;
     followingCount = data['followingCount'] ?? 0;
     
-    // Parse nested streak object if available
-    if (data['streak'] != null) {
+    // Parse currentStreak flexibly (from root or nested streak object)
+    if (data['currentStreak'] != null) {
+      currentStreak = data['currentStreak'] is int ? data['currentStreak'] : int.tryParse(data['currentStreak'].toString()) ?? 0;
+    } else if (data['streak'] != null) {
       currentStreak = data['streak']['currentStreak'] ?? 0;
     }
   }

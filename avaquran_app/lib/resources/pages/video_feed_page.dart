@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../app/networking/api_service.dart';
+import '../../app/networking/quran_api_service.dart';
 import '../widgets/ken_burns_media_item.dart';
+import '/app/models/user.dart';
+import '/config/storage_keys.dart';
 
 class VideoFeedPage extends NyStatefulWidget {
   static RouteView path = ("/video-feed", (_) => VideoFeedPage());
@@ -30,6 +34,12 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
   Timer? _viewTimer;
   final Set<String> _viewedKeysCache = {};
   bool _isAudioPaused = false;
+  
+  // Streak tracking variables
+  int _secondsWatchedThisSession = 0;
+  bool _streakUpdatedThisSession = false;
+  Timer? _sessionTimer;
+  static const int _streakThresholdSeconds = 3; // 3 seconds for testing (was 600)
 
   @override
   get init => () async {
@@ -76,7 +86,25 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
           _pageController = PageController();
           await _fetchInitialFeed();
         }
+
+        // Start session timer to track total watch time
+        _startSessionTimer();
       };
+
+  void _startSessionTimer() {
+    _sessionTimer?.cancel();
+    _sessionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!_isAudioPaused && _feedItems.isNotEmpty && mounted) {
+        _secondsWatchedThisSession++;
+        
+        // Check if threshold reached
+        if (_secondsWatchedThisSession >= _streakThresholdSeconds && !_streakUpdatedThisSession) {
+          _triggerStreakUpdate();
+          _streakUpdatedThisSession = true;
+        }
+      }
+    });
+  }
 
   Future<void> _fetchInitialFeed() async {
     setState(() {
@@ -180,6 +208,7 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
   @override
   void dispose() {
     _viewTimer?.cancel();
+    _sessionTimer?.cancel();
     _audioPlayer.stop();
     _audioPlayer.dispose();
     _pageController.dispose();
@@ -244,6 +273,51 @@ class _VideoFeedPageState extends NyPage<VideoFeedPage> {
 
     // Fire interaction log in the background
     _logInteraction(key, "view");
+    
+    // Note: Streak update now handled by session timer after 10 minutes
+  }
+
+  Future<void> _triggerStreakUpdate() async {
+    if (Auth.data() == null) return;
+    
+    try {
+      // 1. Log activity to Quran Foundation server
+      final String today = DateTime.now().toIso8601String().split('T')[0];
+      await QuranApiService().logActivity(
+        date: today,
+        seconds: _secondsWatchedThisSession,
+      );
+
+      // 2. Fetch fresh streak days from Quran Foundation
+      final streakResponse = await QuranApiService().fetchCurrentStreakDays();
+      if (streakResponse != null && streakResponse['days'] != null) {
+        final int newStreak = streakResponse['days'];
+        
+        // Get current local user to compare
+        final dynamic authData = Auth.data();
+        if (authData != null) {
+          final user = User.fromJson(authData is String ? jsonDecode(authData) : authData);
+          if (newStreak > user.currentStreak) {
+            // Streak increased! Show celebration
+            showToastSuccess(
+              title: "Daily Streak!",
+              description: "You're on a $newStreak day streak! Keep it up.",
+            );
+            
+            // Sync local user object
+            user.currentStreak = newStreak;
+            await Auth.authenticate(data: user.toJson());
+            await StorageKeysConfig.user.save(jsonEncode(user.toJson()));
+          }
+        }
+      }
+      
+      // 3. Fallback: Also update our local backend if needed (optional, but keep it sync'd)
+      await ApiService().updateStreak();
+      
+    } catch (e) {
+      NyLogger.error("Streak update on Quran server failed: $e");
+    }
   }
 
   Future<void> _togglePlayPause() async {

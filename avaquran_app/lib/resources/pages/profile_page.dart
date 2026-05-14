@@ -14,6 +14,7 @@ import '/resources/pages/quran_auth_page.dart';
 import '/resources/pages/auth_page.dart';
 import '/resources/pages/collections_page.dart';
 import '/app/networking/api_service.dart';
+import '/app/networking/quran_api_service.dart';
 import '/config/storage_keys.dart';
 
 class ProfilePage extends NyStatefulWidget {
@@ -35,6 +36,16 @@ class _ProfilePageState extends NyPage<ProfilePage> {
   Future<void> _refreshProfile() async {
     User? freshUser = await api<ApiService>((request) => request.fetchCurrentUser());
     if (freshUser != null) {
+      // Also fetch fresh streak from Quran Foundation to keep synced
+      try {
+        final streakResponse = await QuranApiService().fetchCurrentStreakDays();
+        if (streakResponse != null && streakResponse['days'] != null) {
+          freshUser.currentStreak = streakResponse['days'];
+        }
+      } catch (e) {
+        NyLogger.error("Error refreshing Quran streak: $e");
+      }
+
       setState(() {
         _user = freshUser;
       });

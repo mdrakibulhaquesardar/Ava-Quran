@@ -11,6 +11,8 @@ import '/resources/pages/create_blog_page.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/services.dart';
 import '../../app/networking/api_service.dart';
+import '/resources/pages/tafsir_list_page.dart';
+import '/resources/pages/tafsir_details_page.dart';
 import 'package:shimmer/shimmer.dart';
 
 class FeedPage extends NyStatefulWidget {
@@ -745,6 +747,11 @@ class _FeedPageState extends NyPage<FeedPage> {
                         ),
 
                         const SizedBox(height: 24),
+                        
+                        // TAFSIR SECTION
+                        _buildTafsirSection(context),
+
+                        const SizedBox(height: 24),
 
                         // BLOGS HEADER
                         Padding(
@@ -844,14 +851,184 @@ class _FeedPageState extends NyPage<FeedPage> {
     );
   }
 
+  Widget _buildTafsirSection(BuildContext context) {
+    final List<Map<String, dynamic>> featuredSurahs = [
+      {"number": 1, "name": "Al-Fatihah", "arabic": "الفاتحة", "teaser": "The Opening chapter of the Quran, a prayer for guidance."},
+      {"number": 36, "name": "Ya-Sin", "arabic": "يس", "teaser": "Often called the Heart of the Quran, focusing on the message of the Prophet."},
+      {"number": 67, "name": "Al-Mulk", "arabic": "الملك", "teaser": "A surah that protects and intercedes for its reciter."},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Tafsirs",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Understand the deeper meaning of the Quran.",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.black.withAlpha(130),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => routeTo(TafsirListPage.path),
+                child: Text(
+                  "See All",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: _brandAccent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 160,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: featuredSurahs.length,
+            itemBuilder: (context, index) {
+              final surah = featuredSurahs[index];
+              return Container(
+                width: 260,
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(10),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: Colors.black.withAlpha(10)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -20,
+                        bottom: -20,
+                        child: Text(
+                          surah['arabic'],
+                          style: TextStyle(
+                            fontSize: 80,
+                            color: _brandAccent.withAlpha(15),
+                            fontFamily: 'Amiri',
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: _brandAccent.withAlpha(30),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    "#${surah['number']}",
+                                    style: TextStyle(
+                                      color: _brandAccent,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  surah['name'],
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Expanded(
+                              child: Text(
+                                surah['teaser'],
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black.withAlpha(150),
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            InkWell(
+                              onTap: () => routeTo(TafsirDetailsPage.path, data: surah),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    "Read Tafsir",
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: _brandAccent,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Icon(Icons.arrow_forward, size: 14, color: _brandAccent),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildCircleIconButton(IconData icon, {VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
           color: Colors.white.withAlpha(220),
+          shape: BoxShape.circle,
           border: Border.all(color: Colors.black.withAlpha(15)),
         ),
         child: Icon(icon, color: Colors.black87, size: 20),

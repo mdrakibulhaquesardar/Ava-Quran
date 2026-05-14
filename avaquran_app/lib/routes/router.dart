@@ -17,6 +17,8 @@ import '/resources/pages/auth_page.dart';
 import '/resources/pages/onboarding_page.dart';
 import '/resources/pages/not_found_page.dart';
 import '/resources/pages/home_page.dart';
+import '/resources/pages/tafsir_list_page.dart';
+import '/resources/pages/tafsir_details_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 /* App Router
@@ -48,4 +50,6 @@ appRouter() => nyRoutes((router) {
       router.add(PrayerNotificationsPage.path);
       router.add(PrivacySecurityPage.path);
       router.add(SupportFeedbackPage.path);
+      router.add(TafsirListPage.path);
+      router.add(TafsirDetailsPage.path);
 });

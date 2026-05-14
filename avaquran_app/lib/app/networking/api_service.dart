@@ -223,6 +223,20 @@ class ApiService extends NyApiService {
       request: (request) => request.get("/collections/$collectionId/ayahs"),
     );
   }
+  
+  /// Fetch user activity streak
+  Future<dynamic> fetchMyStreak() async {
+    return await network(
+      request: (request) => request.get("/streaks/me"),
+    );
+  }
+  
+  /// Update/Increment daily streak activity
+  Future<dynamic> updateStreak() async {
+    return await network(
+      request: (request) => request.post("/streaks/update"),
+    );
+  }
 
   /* Should Refresh Token
   |--------------------------------------------------------------------------
