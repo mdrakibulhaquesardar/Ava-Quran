@@ -20,6 +20,7 @@ import '/resources/pages/home_page.dart';
 import '/resources/pages/tafsir_list_page.dart';
 import '/resources/pages/tafsir_details_page.dart';
 import '/resources/pages/mushaf_page.dart';
+import '/resources/pages/audio_player_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 /* App Router
@@ -54,4 +55,5 @@ appRouter() => nyRoutes((router) {
   router.add(TafsirListPage.path);
   router.add(TafsirDetailsPage.path);
   router.add(MushafPage.path);
+  router.add(AudioPlayerPage.path);
 });

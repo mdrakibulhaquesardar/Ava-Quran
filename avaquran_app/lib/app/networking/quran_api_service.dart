@@ -139,6 +139,29 @@ class QuranApiService extends NyApiService {
     );
     return response;
   }
+
+  /// Fetch all available recitations (reciters)
+  /// https://api-docs.quran.foundation/docs/recitations/get-all-recitations/
+  Future<dynamic> fetchRecitations() async {
+    final response = await network(
+      request: (request) => request.get("/resources/recitations"),
+    );
+    NyLogger.debug("fetchRecitations Response: $response");
+    return response;
+  }
+
+  /// Fetch a single audio file for a full chapter
+  /// https://api-docs.quran.foundation/docs/chapter_recitations/get-chapter-recitation/
+  Future<dynamic> fetchFullChapterAudio({
+    required int recitationId,
+    required int chapterNumber,
+  }) async {
+    final response = await network(
+      request: (request) => request.get("/chapter_recitations/$recitationId/$chapterNumber"),
+    );
+    NyLogger.debug("fetchFullChapterAudio Response: $response");
+    return response;
+  }
 }
 
 class _QuranAuthInterceptor extends Interceptor {

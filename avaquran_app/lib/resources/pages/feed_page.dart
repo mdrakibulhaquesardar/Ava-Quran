@@ -16,6 +16,9 @@ import '/resources/pages/tafsir_details_page.dart';
 import 'package:shimmer/shimmer.dart';
 import '/resources/pages/mushaf_page.dart';
 import '/config/storage_keys.dart';
+import 'package:avaquran_app/resources/widgets/playlist_view.dart';
+import 'package:avaquran_app/resources/widgets/mini_player_widget.dart';
+import 'package:avaquran_app/resources/widgets/videos_view.dart';
 
 class FeedPage extends NyStatefulWidget {
   static RouteView path = ("/feed", (_) => FeedPage());
@@ -901,24 +904,26 @@ class _FeedPageState extends NyPage<FeedPage> {
                         _buildPeoplesView(),
 
                         // TAB 2: VIDEOS
-                        _buildPlaceholderView(
-                          "Videos",
-                          Icons.play_circle_outline,
-                        ),
+                        const VideosView(),
 
                         // TAB 3: BLOGS
                         _buildBlogsView(),
 
                         // TAB 4: PLAYLISTS
-                        _buildPlaceholderView(
-                          "Playlists",
-                          Icons.playlist_play_outlined,
-                        ),
+                        const PlaylistView(),
                       ],
                     ),
                   ),
                 ],
               ),
+            ),
+
+            // 3. MINI PLAYER OVERLAY
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: MiniPlayerWidget(),
             ),
           ],
         ),
