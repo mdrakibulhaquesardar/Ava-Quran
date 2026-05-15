@@ -99,6 +99,46 @@ class QuranApiService extends NyApiService {
     NyLogger.debug("fetchWordMorphology Response: $response");
     return response;
   }
+
+  /// Fetch Mushaf Page layout data (Verses and Words)
+  /// https://api-docs.quran.foundation/docs/verses/get-verses-by-page/
+  Future<dynamic> fetchMushafPage({
+    required int pageNumber,
+    int mushafId = 4, // Default to UthmaniHafs
+  }) async {
+    final response = await network(
+      request: (request) => request.get("/verses/by_page/$pageNumber", queryParameters: {
+        "words": "true",
+        "mushaf": mushafId,
+        "word_fields": "text_uthmani,line_number,page_number,char_type_name",
+      }),
+    );
+    return response;
+  }
+
+  /// Fetch Surah (Chapter) metadata
+  /// https://api-docs.quran.foundation/docs/chapters/get-all-chapters/
+  Future<dynamic> fetchChapters() async {
+    final response = await network(
+      request: (request) => request.get("/chapters"),
+    );
+    return response;
+  }
+
+  /// Semantic Search for Quran Verses
+  /// https://api-docs.quran.foundation/docs/search/search-quran/
+  Future<dynamic> searchQuran({
+    required String query,
+    int? page,
+  }) async {
+    final response = await network(
+      request: (request) => request.get("/search", queryParameters: {
+        "q": query,
+        if (page != null) "page": page,
+      }),
+    );
+    return response;
+  }
 }
 
 class _QuranAuthInterceptor extends Interceptor {
@@ -111,7 +151,8 @@ class _QuranAuthInterceptor extends Interceptor {
     // Skip x-auth-token for public content resources to avoid 403 or 400 errors
     bool isPublicResource = options.path.contains("resources") || 
                            options.path.contains("tafsirs") ||
-                           options.path.contains("verses");
+                           options.path.contains("verses") ||
+                           options.path.contains("mushaf_layouts");
 
     if (token != null && token.isNotEmpty && !isPublicResource) {
       options.headers["x-auth-token"] = token;

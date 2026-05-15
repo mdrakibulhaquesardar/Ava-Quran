@@ -12,24 +12,25 @@ import 'package:nylo_framework/nylo_framework.dart';
 final class StorageKeysConfig {
   // Define the keys you want to be synced on boot
   static Future<List<StorageKey>> Function() syncedOnBoot() => () async {
-        return [
-          auth,
-          bearerToken,
-          refreshToken,
-          onboardingComplete,
-          // coins.defaultValue(10), // give the user 10 coins by default
-        ];
-      };
+    return [
+      auth,
+      bearerToken,
+      refreshToken,
+      onboardingComplete,
+      // coins.defaultValue(10), // give the user 10 coins by default
+    ];
+  };
 
   static final StorageKey auth = 'SK_USER';
 
   static final StorageKey bearerToken = 'SK_BEARER_TOKEN';
-  
+
   static final StorageKey refreshToken = 'SK_REFRESH_TOKEN';
-  
+
   static final StorageKey onboardingComplete = 'SK_ONBOARDING_COMPLETE';
 
   static final StorageKey user = 'SK_USER_DATA';
+  static final StorageKey lastMushafPage = 'SK_LAST_MUSHAF_PAGE';
 
   /// Add your storage keys here...
 }

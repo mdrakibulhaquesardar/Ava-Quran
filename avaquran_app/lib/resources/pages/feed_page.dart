@@ -14,6 +14,8 @@ import '../../app/networking/api_service.dart';
 import '/resources/pages/tafsir_list_page.dart';
 import '/resources/pages/tafsir_details_page.dart';
 import 'package:shimmer/shimmer.dart';
+import '/resources/pages/mushaf_page.dart';
+import '/config/storage_keys.dart';
 
 class FeedPage extends NyStatefulWidget {
   static RouteView path = ("/feed", (_) => FeedPage());
@@ -50,6 +52,7 @@ class _FeedPageState extends NyPage<FeedPage> {
   bool _isFetchingMoreUsers = false;
   int _usersPage = 1;
   bool _usersHasMore = true;
+  int? _lastMushafPage;
 
   // BRAND COLOR
   final Color _brandAccent = const Color(0xFF267B92);
@@ -80,21 +83,24 @@ class _FeedPageState extends NyPage<FeedPage> {
       "icon": Icons.blur_circular,
       "color": const Color(0xFFB5A6C8),
     },
-    {
-      "name": "Peaceful",
-      "icon": Icons.spa,
-      "color": const Color(0xFF7FBAB3),
-    },
+    {"name": "Peaceful", "icon": Icons.spa, "color": const Color(0xFF7FBAB3)},
   ];
 
   @override
   get init => () {
-    _peoplesScrollController = ScrollController()..addListener(_onPeoplesScroll);
+    _peoplesScrollController = ScrollController()
+      ..addListener(_onPeoplesScroll);
     _blogsScrollController = ScrollController()..addListener(_onBlogsScroll);
     _fetchMostLovedData();
     _fetchDiscoverUsers();
     _fetchBlogsData();
+    _fetchLastMushafPage();
   };
+
+  Future<void> _fetchLastMushafPage() async {
+    _lastMushafPage = await StorageKeysConfig.lastMushafPage.read();
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -104,14 +110,17 @@ class _FeedPageState extends NyPage<FeedPage> {
   }
 
   void _onPeoplesScroll() {
-    if (_peoplesScrollController.position.pixels >= _peoplesScrollController.position.maxScrollExtent - 300) {
+    if (_peoplesScrollController.position.pixels >=
+        _peoplesScrollController.position.maxScrollExtent - 300) {
       if (!_isLoadingUsers && !_isFetchingMoreUsers && _usersHasMore) {
         _fetchMoreDiscoverUsers();
       }
     }
   }
+
   void _onBlogsScroll() {
-    if (_blogsScrollController.position.pixels >= _blogsScrollController.position.maxScrollExtent - 300) {
+    if (_blogsScrollController.position.pixels >=
+        _blogsScrollController.position.maxScrollExtent - 300) {
       if (!_isLoadingBlogs && !_isFetchingMoreBlogs && _blogsHasMore) {
         _fetchMoreBlogsData();
       }
@@ -125,7 +134,10 @@ class _FeedPageState extends NyPage<FeedPage> {
       _blogsPage = 1;
     });
     try {
-      final response = await ApiService().fetchBlogs(page: _blogsPage, limit: 10);
+      final response = await ApiService().fetchBlogs(
+        page: _blogsPage,
+        limit: 10,
+      );
       if (response != null && response['items'] != null && mounted) {
         setState(() {
           _blogItems = List.from(response['items']);
@@ -176,7 +188,10 @@ class _FeedPageState extends NyPage<FeedPage> {
       _usersPage = 1;
     });
     try {
-      final response = await ApiService().fetchDiscoverUsers(page: _usersPage, limit: 20);
+      final response = await ApiService().fetchDiscoverUsers(
+        page: _usersPage,
+        limit: 20,
+      );
       if (response != null && response['items'] != null && mounted) {
         setState(() {
           _discoverUsers = List.from(response['items']);
@@ -201,7 +216,10 @@ class _FeedPageState extends NyPage<FeedPage> {
     });
     try {
       final nextPage = _usersPage + 1;
-      final response = await ApiService().fetchDiscoverUsers(page: nextPage, limit: 20);
+      final response = await ApiService().fetchDiscoverUsers(
+        page: nextPage,
+        limit: 20,
+      );
       if (response != null && response['items'] != null && mounted) {
         setState(() {
           _usersPage = nextPage;
@@ -249,9 +267,7 @@ class _FeedPageState extends NyPage<FeedPage> {
           user["isFollowing"] = isCurrentlyFollowing;
           user["followersCount"] = currentFollowers;
         });
-        showToastDanger(
-          description: "Connection dropped, please try again.",
-        );
+        showToastDanger(description: "Connection dropped, please try again.");
       }
     }
   }
@@ -278,7 +294,9 @@ class _FeedPageState extends NyPage<FeedPage> {
 
   String _formatCounter(dynamic count) {
     if (count == null) return "0";
-    final int numCount = count is int ? count : int.tryParse(count.toString()) ?? 0;
+    final int numCount = count is int
+        ? count
+        : int.tryParse(count.toString()) ?? 0;
     if (numCount >= 1000000) {
       return "${(numCount / 1000000).toStringAsFixed(1)}M";
     }
@@ -304,548 +322,605 @@ class _FeedPageState extends NyPage<FeedPage> {
         }
       },
       child: Scaffold(
-      backgroundColor: const Color(
-        0xFFF9FAFB,
-      ), // Slightly off-white premium back
-      body: Stack(
-        children: [
-          // 1. SUBTLE ISLAMIC BACKGROUND PATTERN TILE
-          Positioned.fill(
-            child: Image.asset(
-              "assets/images/pattern_light_soft.png",
-              repeat: ImageRepeat.repeat,
-              opacity: const AlwaysStoppedAnimation(0.60), // Optimized soft opacity
+        backgroundColor: const Color(
+          0xFFF9FAFB,
+        ), // Slightly off-white premium back
+        body: Stack(
+          children: [
+            // 1. SUBTLE ISLAMIC BACKGROUND PATTERN TILE
+            Positioned.fill(
+              child: Image.asset(
+                "assets/images/pattern_light_soft.png",
+                repeat: ImageRepeat.repeat,
+                opacity: const AlwaysStoppedAnimation(
+                  0.60,
+                ), // Optimized soft opacity
+              ),
             ),
-          ),
 
-          // 2. MAIN CONTENT IN FRONT
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // TOP HEADER ROW
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0,
-                    vertical: 6.0,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Image.asset("assets/images/Icon_text.png", height: 45),
-                      Row(
-                        children: [
-                          _buildCircleIconButton(
-                            Icons.add,
-                            onTap: () async {
-                              final published = await Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => CreateBlogPage()),
-                              );
-                              if (published == true) {
-                                _fetchBlogsData();
-                              }
-                            },
-                          ),
-                          const SizedBox(width: 12),
-                          _buildCircleIconButton(
-                            Icons.notifications_none_outlined,
-                          ),
-                          const SizedBox(width: 12),
-                          _buildCircleIconButton(
-                            Icons.person_2,
-                            onTap: () => routeTo(ProfilePage.path),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // HORIZONTAL SCROLLING TOP TABS
-                Container(
-                  height: 42,
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: _navTabs.length,
-                    itemBuilder: (context, index) {
-                      final bool isSelected = index == _selectedNavTabIndex;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedNavTabIndex = index;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.only(right: 16),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? _brandAccent
-                                : Colors.white.withAlpha(150),
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: _brandAccent.withAlpha(50),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : null,
-                            border: !isSelected
-                                ? Border.all(color: Colors.black.withAlpha(15))
-                                : null,
-                          ),
-                          child: Center(
-                            child: Text(
-                              _navTabs[index],
-                              style: TextStyle(
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.black54,
-                                fontSize: 15,
-                                fontWeight: isSelected
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // SCROLLABLE MAIN CONTENT
-                Expanded(
-                  child: IndexedStack(
-                    index: _selectedNavTabIndex,
-                    children: [
-                      // TAB 0: FEED CONTENT
-                      SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(vertical: 0.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            // 2. MAIN CONTENT IN FRONT
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // TOP HEADER ROW
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0,
+                      vertical: 6.0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // SUB-TAB DISCOVER / FOLLOWING TOGGLE
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20.0,
-                            vertical: 6,
-                          ),
-                          child: Container(
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(200),
-                              borderRadius: BorderRadius.circular(23),
-                              border: Border.all(color: Colors.black12),
+                        Image.asset("assets/images/Icon_text.png", height: 45),
+                        Row(
+                          children: [
+                            _buildCircleIconButton(
+                              Icons.add,
+                              onTap: () async {
+                                final published = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CreateBlogPage(),
+                                  ),
+                                );
+                                if (published == true) {
+                                  _fetchBlogsData();
+                                }
+                              },
                             ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => setState(
-                                      () => _selectedSubTabIndex = 0,
-                                    ),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 200,
-                                      ),
-                                      margin: const EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        color: _selectedSubTabIndex == 0
-                                            ? _brandAccent.withAlpha(30)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          "Discover",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: _selectedSubTabIndex == 0
-                                                ? _brandAccent
-                                                : Colors.black54,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => setState(
-                                      () => _selectedSubTabIndex = 1,
-                                    ),
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 200,
-                                      ),
-                                      margin: const EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        color: _selectedSubTabIndex == 1
-                                            ? _brandAccent.withAlpha(30)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          "Following",
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: _selectedSubTabIndex == 1
-                                                ? _brandAccent
-                                                : Colors.black54,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(width: 12),
+                            _buildCircleIconButton(
+                              Icons.notifications_none_outlined,
                             ),
-                          ),
+                            const SizedBox(width: 12),
+                            _buildCircleIconButton(
+                              Icons.person_2,
+                              onTap: () => routeTo(ProfilePage.path),
+                            ),
+                          ],
                         ),
-
-                        const SizedBox(height: 16),
-
-                        // TRENDING VIDEOS SECTION
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Row(
-                            children: const [
-                              Text("🔥", style: TextStyle(fontSize: 20)),
-                              SizedBox(width: 8),
-                              Text(
-                                "Trending Videos",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // HORIZONTAL VIDEO LIST (DYNAMIC REEL CAROUSEL)
-                        SizedBox(
-                          height: 190,
-                          child: _isLoadingLoved
-                              ? ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                                  itemCount: 4,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemBuilder: (context, index) {
-                                    return Shimmer.fromColors(
-                                      baseColor: Colors.grey[300]!,
-                                      highlightColor: Colors.grey[100]!,
-                                      child: Container(
-                                        width: 150,
-                                        margin: const EdgeInsets.only(right: 16),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                )
-                              : _mostLovedVideos.isEmpty
-                                  ? Center(
-                                      child: Text(
-                                        "No highlights available yet",
-                                        style: TextStyle(
-                                          color: Colors.grey[500],
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    )
-                                  : ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                                      itemCount: _mostLovedVideos.length,
-                                      itemBuilder: (context, index) {
-                                        final item = _mostLovedVideos[index];
-                                        final background = item["videoBackground"];
-                                        final meta = item["videoMeta"];
-
-                                        final String translation = item["translation"] ?? "Beautiful Reflection";
-                                        final String imageUrl = background?["url"] ?? "";
-                                        final int durationSeconds = meta?["duration"] ?? 30;
-                                        final int likes = meta?["likes"] ?? 0;
-                                        final bool isLoved = item["isLoved"] ?? false;
-
-                                        return TrendVideoCard(
-                                          title: translation,
-                                          image: imageUrl,
-                                          duration: "${durationSeconds}s",
-                                          likes: _formatCounter(likes),
-                                          isLoved: isLoved,
-                                          onTap: () {
-                                            // Navigate directly to the dynamic reel viewer, passing state and index key context!
-                                            routeTo(
-                                              VideoFeedPage.path,
-                                              data: {
-                                                'initialVerseKey': item["verseKey"],
-                                                'preloadedFeed': _mostLovedVideos,
-                                                'feedType': 'most_loved',
-                                              },
-                                            );
-                                          },
-                                        );
-                                      },
-                                    ),
-                        ),
-
-                        // PAGINATION DOTS OVERLAY SIMULATED
-                        const SizedBox(height: 12),
-                        Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 14,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color:
-                                      _brandAccent, // Swapped from generic black
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Container(
-                                width: 4,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Container(
-                                width: 4,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Container(
-                                width: 4,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // MOOD SECTION
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: const [
-                                  Icon(
-                                    Icons.mood,
-                                    size: 20,
-                                    color: Colors.black87,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "How do you feel?",
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "Ava personalized Quran moments to your mood.",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black.withAlpha(130),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // TOPICS CHIP WRAPPER
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: _moods.map((mood) {
-                              return GestureDetector(
-                                onTap: () => routeTo(VideoFeedPage.path, data: mood["name"].toString().toLowerCase()),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: mood["color"],
-                                    borderRadius: BorderRadius.circular(30),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: (mood["color"] as Color)
-                                            .withAlpha(60),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        mood["icon"],
-                                        size: 18,
-                                        color: Colors.white,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        mood["name"],
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-                        
-                        // TAFSIR SECTION
-                        _buildTafsirSection(context),
-
-                        const SizedBox(height: 24),
-
-                        // BLOGS HEADER
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20.0,
-                            vertical: 6.0,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                "Blogs",
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              Text(
-                                "See More",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: _brandAccent, // Swapped accent
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // BLOG CARDS LIST
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          child: _isLoadingBlogs
-                              ? Column(
-                                  children: List.generate(
-                                    3,
-                                    (index) => Shimmer.fromColors(
-                                      baseColor: Colors.grey[300]!,
-                                      highlightColor: Colors.grey[100]!,
-                                      child: Container(
-                                        height: 109,
-                                        margin: const EdgeInsets.only(bottom: 16),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(16),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              : _blogItems.isEmpty
-                                  ? Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(20.0),
-                                        child: Text(
-                                          "No articles shared yet.",
-                                          style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    )
-                                  : Column(
-                                      children: _blogItems
-                                          .take(3)
-                                          .map((blog) => BlogCard(blog: blog))
-                                          .toList(),
-                                    ),
-                        ),
-                        const SizedBox(height: 30), // End spacing
                       ],
                     ),
                   ),
 
-                      // TAB 1: PEOPLES
-                      _buildPeoplesView(),
-
-                      // TAB 2: VIDEOS
-                      _buildPlaceholderView(
-                          "Videos", Icons.play_circle_outline),
-
-                      // TAB 3: BLOGS
-                      _buildBlogsView(),
-
-                      // TAB 4: PLAYLISTS
-                      _buildPlaceholderView(
-                          "Playlists", Icons.playlist_play_outlined),
-                    ],
+                  // HORIZONTAL SCROLLING TOP TABS
+                  Container(
+                    height: 42,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: _navTabs.length,
+                      itemBuilder: (context, index) {
+                        final bool isSelected = index == _selectedNavTabIndex;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedNavTabIndex = index;
+                            });
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.only(right: 8), // Reduced from 16
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14, // Reduced from 20
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? _brandAccent
+                                  : Colors.white.withAlpha(150),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: _brandAccent.withAlpha(50),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ]
+                                  : null,
+                              border: !isSelected
+                                  ? Border.all(
+                                      color: Colors.black.withAlpha(15),
+                                    )
+                                  : null,
+                            ),
+                            child: Center(
+                              child: Text(
+                                _navTabs[index],
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.black54,
+                                  fontSize: 13, // Reduced from 15
+                                  fontWeight: isSelected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
+
+                  // SCROLLABLE MAIN CONTENT
+                  Expanded(
+                    child: IndexedStack(
+                      index: _selectedNavTabIndex,
+                      children: [
+                        // TAB 0: FEED CONTENT
+                        SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(vertical: 0.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // SUB-TAB DISCOVER / FOLLOWING TOGGLE
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
+                                  vertical: 6,
+                                ),
+                                child: Container(
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withAlpha(200),
+                                    borderRadius: BorderRadius.circular(23),
+                                    border: Border.all(color: Colors.black12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => setState(
+                                            () => _selectedSubTabIndex = 0,
+                                          ),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
+                                            margin: const EdgeInsets.all(3),
+                                            decoration: BoxDecoration(
+                                              color: _selectedSubTabIndex == 0
+                                                  ? _brandAccent.withAlpha(30)
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                "Discover",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  color:
+                                                      _selectedSubTabIndex == 0
+                                                      ? _brandAccent
+                                                      : Colors.black54,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: GestureDetector(
+                                          onTap: () => setState(
+                                            () => _selectedSubTabIndex = 1,
+                                          ),
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 200,
+                                            ),
+                                            margin: const EdgeInsets.all(3),
+                                            decoration: BoxDecoration(
+                                              color: _selectedSubTabIndex == 1
+                                                  ? _brandAccent.withAlpha(30)
+                                                  : Colors.transparent,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Center(
+                                              child: Text(
+                                                "Following",
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  color:
+                                                      _selectedSubTabIndex == 1
+                                                      ? _brandAccent
+                                                      : Colors.black54,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // TRENDING VIDEOS SECTION
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
+                                ),
+                                child: Row(
+                                  children: const [
+                                    Text("🔥", style: TextStyle(fontSize: 20)),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      "Trending Videos",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // HORIZONTAL VIDEO LIST (DYNAMIC REEL CAROUSEL)
+                              SizedBox(
+                                height: 190,
+                                child: _isLoadingLoved
+                                    ? ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                        ),
+                                        itemCount: 4,
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        itemBuilder: (context, index) {
+                                          return Shimmer.fromColors(
+                                            baseColor: Colors.grey[300]!,
+                                            highlightColor: Colors.grey[100]!,
+                                            child: Container(
+                                              width: 150,
+                                              margin: const EdgeInsets.only(
+                                                right: 16,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : _mostLovedVideos.isEmpty
+                                    ? Center(
+                                        child: Text(
+                                          "No highlights available yet",
+                                          style: TextStyle(
+                                            color: Colors.grey[500],
+                                            fontStyle: FontStyle.italic,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      )
+                                    : ListView.builder(
+                                        scrollDirection: Axis.horizontal,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                        ),
+                                        itemCount: _mostLovedVideos.length,
+                                        itemBuilder: (context, index) {
+                                          final item = _mostLovedVideos[index];
+                                          final background =
+                                              item["videoBackground"];
+                                          final meta = item["videoMeta"];
+
+                                          final String translation =
+                                              item["translation"] ??
+                                              "Beautiful Reflection";
+                                          final String imageUrl =
+                                              background?["url"] ?? "";
+                                          final int durationSeconds =
+                                              meta?["duration"] ?? 30;
+                                          final int likes = meta?["likes"] ?? 0;
+                                          final bool isLoved =
+                                              item["isLoved"] ?? false;
+
+                                          return TrendVideoCard(
+                                            title: translation,
+                                            image: imageUrl,
+                                            duration: "${durationSeconds}s",
+                                            likes: _formatCounter(likes),
+                                            isLoved: isLoved,
+                                            onTap: () {
+                                              // Navigate directly to the dynamic reel viewer, passing state and index key context!
+                                              routeTo(
+                                                VideoFeedPage.path,
+                                                data: {
+                                                  'initialVerseKey':
+                                                      item["verseKey"],
+                                                  'preloadedFeed':
+                                                      _mostLovedVideos,
+                                                  'feedType': 'most_loved',
+                                                },
+                                              );
+                                            },
+                                          );
+                                        },
+                                      ),
+                              ),
+
+                              // PAGINATION DOTS OVERLAY SIMULATED
+                              const SizedBox(height: 12),
+                              Center(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 14,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color:
+                                            _brandAccent, // Swapped from generic black
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      width: 4,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      width: 4,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Container(
+                                      width: 4,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade300,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // MOOD SECTION
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: const [
+                                        Icon(
+                                          Icons.mood,
+                                          size: 20,
+                                          color: Colors.black87,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          "How do you feel?",
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "Ava personalized Quran moments to your mood.",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black.withAlpha(130),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // TOPICS CHIP WRAPPER
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
+                                ),
+                                child: Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: _moods.map((mood) {
+                                    return GestureDetector(
+                                      onTap: () => routeTo(
+                                        VideoFeedPage.path,
+                                        data: mood["name"]
+                                            .toString()
+                                            .toLowerCase(),
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: mood["color"],
+                                          borderRadius: BorderRadius.circular(
+                                            30,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: (mood["color"] as Color)
+                                                  .withAlpha(60),
+                                              blurRadius: 6,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              mood["icon"],
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              mood["name"],
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // TAFSIR SECTION
+                              _buildTafsirSection(context),
+
+                              const SizedBox(height: 24),
+
+                              // MUSHAF SECTION
+                              _buildMushafSection(context),
+
+                              const SizedBox(height: 24),
+
+                              // BLOGS HEADER
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
+                                  vertical: 6.0,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      "Blogs",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    Text(
+                                      "See More",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: _brandAccent, // Swapped accent
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // BLOG CARDS LIST
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0,
+                                ),
+                                child: _isLoadingBlogs
+                                    ? Column(
+                                        children: List.generate(
+                                          3,
+                                          (index) => Shimmer.fromColors(
+                                            baseColor: Colors.grey[300]!,
+                                            highlightColor: Colors.grey[100]!,
+                                            child: Container(
+                                              height: 109,
+                                              margin: const EdgeInsets.only(
+                                                bottom: 16,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : _blogItems.isEmpty
+                                    ? Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(20.0),
+                                          child: Text(
+                                            "No articles shared yet.",
+                                            style: TextStyle(
+                                              color: Colors.grey[500],
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      )
+                                    : Column(
+                                        children: _blogItems
+                                            .take(3)
+                                            .map((blog) => BlogCard(blog: blog))
+                                            .toList(),
+                                      ),
+                              ),
+                              const SizedBox(height: 30), // End spacing
+                            ],
+                          ),
+                        ),
+
+                        // TAB 1: PEOPLES
+                        _buildPeoplesView(),
+
+                        // TAB 2: VIDEOS
+                        _buildPlaceholderView(
+                          "Videos",
+                          Icons.play_circle_outline,
+                        ),
+
+                        // TAB 3: BLOGS
+                        _buildBlogsView(),
+
+                        // TAB 4: PLAYLISTS
+                        _buildPlaceholderView(
+                          "Playlists",
+                          Icons.playlist_play_outlined,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -853,9 +928,25 @@ class _FeedPageState extends NyPage<FeedPage> {
 
   Widget _buildTafsirSection(BuildContext context) {
     final List<Map<String, dynamic>> featuredSurahs = [
-      {"number": 1, "name": "Al-Fatihah", "arabic": "الفاتحة", "teaser": "The Opening chapter of the Quran, a prayer for guidance."},
-      {"number": 36, "name": "Ya-Sin", "arabic": "يس", "teaser": "Often called the Heart of the Quran, focusing on the message of the Prophet."},
-      {"number": 67, "name": "Al-Mulk", "arabic": "الملك", "teaser": "A surah that protects and intercedes for its reciter."},
+      {
+        "number": 1,
+        "name": "Al-Fatihah",
+        "arabic": "الفاتحة",
+        "teaser": "The Opening chapter of the Quran, a prayer for guidance.",
+      },
+      {
+        "number": 36,
+        "name": "Ya-Sin",
+        "arabic": "يس",
+        "teaser":
+            "Often called the Heart of the Quran, focusing on the message of the Prophet.",
+      },
+      {
+        "number": 67,
+        "name": "Al-Mulk",
+        "arabic": "الملك",
+        "teaser": "A surah that protects and intercedes for its reciter.",
+      },
     ];
 
     return Column(
@@ -950,7 +1041,10 @@ class _FeedPageState extends NyPage<FeedPage> {
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: _brandAccent.withAlpha(30),
                                     borderRadius: BorderRadius.circular(8),
@@ -990,7 +1084,8 @@ class _FeedPageState extends NyPage<FeedPage> {
                             ),
                             const SizedBox(height: 10),
                             InkWell(
-                              onTap: () => routeTo(TafsirDetailsPage.path, data: surah),
+                              onTap: () =>
+                                  routeTo(TafsirDetailsPage.path, data: surah),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -1003,7 +1098,11 @@ class _FeedPageState extends NyPage<FeedPage> {
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  Icon(Icons.arrow_forward, size: 14, color: _brandAccent),
+                                  Icon(
+                                    Icons.arrow_forward,
+                                    size: 14,
+                                    color: _brandAccent,
+                                  ),
                                 ],
                               ),
                             ),
@@ -1015,6 +1114,249 @@ class _FeedPageState extends NyPage<FeedPage> {
                 ),
               );
             },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMushafSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Mushaf",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Read the Quran in traditional Mushaf view.",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.black.withAlpha(130),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              TextButton(
+                onPressed: () => routeTo(MushafPage.path),
+                child: Text(
+                  "Open Now",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: _brandAccent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: GestureDetector(
+            onTap: () => routeTo(MushafPage.path),
+            child: Container(
+              height: 165, // More compact height
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: _brandAccent.withAlpha(40),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Stack(
+                  children: [
+                    // Premium Gradient Background
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            _brandAccent,
+                            _brandAccent.withAlpha(230),
+                            const Color(0xFF1A5666),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                    ),
+
+                    // Subtle Pattern Overlay
+                    Positioned.fill(
+                      child: Opacity(
+                        opacity: 0.08,
+                        child: Image.asset(
+                          "assets/images/pattern_light_soft.png",
+                          repeat: ImageRepeat.repeat,
+                        ),
+                      ),
+                    ),
+
+                    // Decorative Mushaf Image Background
+                    Positioned(
+                      right: -30,
+                      bottom: -40,
+                      child: Opacity(
+                        opacity: 0.2,
+                        child: Image.asset(
+                          "assets/images/mushaf.png",
+                          width: 220,
+                        ),
+                      ),
+                    ),
+
+                    // The "Book" Spine Effect
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 30,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withAlpha(60),
+                              Colors.black.withAlpha(10),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(24),
+                            bottomLeft: Radius.circular(24),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Gold Vertical Divider Line
+                    Positioned(
+                      left: 30,
+                      top: 10,
+                      bottom: 10,
+                      child: Container(
+                        width: 1.2,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFFD1B979).withAlpha(50),
+                              const Color(0xFFD1B979),
+                              const Color(0xFFD1B979).withAlpha(50),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Main Content
+                    Padding(
+                      padding: const EdgeInsets.only(left: 50, right: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "القرآن الكريم",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 32, // Scaled down
+                              fontFamily: 'Amiri',
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black26,
+                                  offset: Offset(0, 2),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "THE HOLY QURAN",
+                            style: TextStyle(
+                              color: Colors.white.withAlpha(180),
+                              fontSize: 12, // Scaled down
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(30),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withAlpha(40),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.menu_book_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _lastMushafPage != null
+                                      ? "Continue Reading (Page $_lastMushafPage)"
+                                      : "Start Reading",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Floating Ornament
+                    Positioned(
+                      right: -10,
+                      bottom: -10,
+                      child: Icon(
+                        Icons.auto_awesome,
+                        color: const Color(0xFFD1B979).withAlpha(60),
+                        size: 80,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -1035,7 +1377,6 @@ class _FeedPageState extends NyPage<FeedPage> {
       ),
     );
   }
-
 
   Widget _buildPeoplesView() {
     if (_isLoadingUsers) {
@@ -1063,7 +1404,11 @@ class _FeedPageState extends NyPage<FeedPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.people_outline, size: 64, color: _brandAccent.withAlpha(60)),
+            Icon(
+              Icons.people_outline,
+              size: 64,
+              color: _brandAccent.withAlpha(60),
+            ),
             const SizedBox(height: 16),
             Text(
               "No community members found.",
@@ -1078,7 +1423,7 @@ class _FeedPageState extends NyPage<FeedPage> {
               onPressed: _fetchDiscoverUsers,
               icon: const Icon(Icons.refresh),
               label: const Text("Retry"),
-            )
+            ),
           ],
         ),
       );
@@ -1098,7 +1443,7 @@ class _FeedPageState extends NyPage<FeedPage> {
                   color: Colors.black.withAlpha(5),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
-                )
+                ),
               ],
               border: Border.all(color: Colors.grey.shade100),
             ),
@@ -1106,9 +1451,10 @@ class _FeedPageState extends NyPage<FeedPage> {
               decoration: InputDecoration(
                 hintText: "Search people to follow...",
                 hintStyle: TextStyle(
-                    color: Colors.grey.shade400,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500),
+                  color: Colors.grey.shade400,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
                 prefixIcon: Icon(Icons.search, color: _brandAccent, size: 20),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 15),
@@ -1136,7 +1482,9 @@ class _FeedPageState extends NyPage<FeedPage> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7FBAB3)),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF7FBAB3),
+                          ),
                         ),
                       ),
                     ),
@@ -1188,14 +1536,11 @@ class _FeedPageState extends NyPage<FeedPage> {
                         fit: BoxFit.cover,
                       ),
                     )
-                  : SvgPicture.string(
-                      multiavatar(name),
-                      fit: BoxFit.cover,
-                    ),
+                  : SvgPicture.string(multiavatar(name), fit: BoxFit.cover),
             ),
           ),
           const SizedBox(width: 16),
-          
+
           // Text Details Block
           Expanded(
             child: Column(
@@ -1232,7 +1577,7 @@ class _FeedPageState extends NyPage<FeedPage> {
               ],
             ),
           ),
-          
+
           // Beautiful Interactive Follow Toggle Button
           GestureDetector(
             onTap: () => _toggleFollow(index),
@@ -1294,7 +1639,7 @@ class _FeedPageState extends NyPage<FeedPage> {
               color: Colors.grey.shade600,
               fontWeight: FontWeight.w500,
             ),
-          )
+          ),
         ],
       ),
     );
@@ -1326,7 +1671,11 @@ class _FeedPageState extends NyPage<FeedPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.article_outlined, size: 64, color: _brandAccent.withAlpha(60)),
+            Icon(
+              Icons.article_outlined,
+              size: 64,
+              color: _brandAccent.withAlpha(60),
+            ),
             const SizedBox(height: 16),
             Text(
               "No community blogs published yet.",
@@ -1341,7 +1690,7 @@ class _FeedPageState extends NyPage<FeedPage> {
               onPressed: _fetchBlogsData,
               icon: const Icon(Icons.refresh),
               label: const Text("Refresh Feed"),
-            )
+            ),
           ],
         ),
       );
@@ -1361,14 +1710,18 @@ class _FeedPageState extends NyPage<FeedPage> {
                   color: Colors.black.withAlpha(5),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
-                )
+                ),
               ],
               border: Border.all(color: Colors.grey.shade100),
             ),
             child: TextField(
               decoration: InputDecoration(
                 hintText: "Search articles & lessons...",
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14, fontWeight: FontWeight.w500),
+                hintStyle: TextStyle(
+                  color: Colors.grey.shade400,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
                 prefixIcon: Icon(Icons.search, color: _brandAccent, size: 20),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 15),
@@ -1397,7 +1750,9 @@ class _FeedPageState extends NyPage<FeedPage> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF7FBAB3)),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF7FBAB3),
+                          ),
                         ),
                       ),
                     ),
@@ -1471,7 +1826,7 @@ class _FeedPageState extends NyPage<FeedPage> {
               color: Colors.black.withAlpha(10),
               blurRadius: 20,
               offset: const Offset(0, 10),
-            )
+            ),
           ],
         ),
         child: ClipRRect(
@@ -1488,15 +1843,23 @@ class _FeedPageState extends NyPage<FeedPage> {
                         fit: BoxFit.cover,
                         errorWidget: (context, url, error) => Container(
                           color: const Color(0xFFEBF5F7),
-                          child: const Icon(Icons.article_outlined, color: Color(0xFF267B92), size: 48),
+                          child: const Icon(
+                            Icons.article_outlined,
+                            color: Color(0xFF267B92),
+                            size: 48,
+                          ),
                         ),
                       )
                     : Container(
                         color: const Color(0xFFEBF5F7),
-                        child: const Icon(Icons.article_outlined, color: Color(0xFF267B92), size: 48),
+                        child: const Icon(
+                          Icons.article_outlined,
+                          color: Color(0xFF267B92),
+                          size: 48,
+                        ),
                       ),
               ),
-              
+
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -1519,7 +1882,10 @@ class _FeedPageState extends NyPage<FeedPage> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
@@ -1552,7 +1918,11 @@ class _FeedPageState extends NyPage<FeedPage> {
                         const CircleAvatar(
                           radius: 12,
                           backgroundColor: Colors.white24,
-                          child: Icon(Icons.person, size: 14, color: Colors.white),
+                          child: Icon(
+                            Icons.person,
+                            size: 14,
+                            color: Colors.white,
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -1564,7 +1934,11 @@ class _FeedPageState extends NyPage<FeedPage> {
                           ),
                         ),
                         const Spacer(),
-                        const Icon(Icons.bookmark_border_rounded, color: Colors.white, size: 20),
+                        const Icon(
+                          Icons.bookmark_border_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ],
                     ),
                   ],

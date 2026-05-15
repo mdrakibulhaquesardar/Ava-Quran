@@ -19,6 +19,7 @@ import '/resources/pages/not_found_page.dart';
 import '/resources/pages/home_page.dart';
 import '/resources/pages/tafsir_list_page.dart';
 import '/resources/pages/tafsir_details_page.dart';
+import '/resources/pages/mushaf_page.dart';
 import 'package:nylo_framework/nylo_framework.dart';
 
 /* App Router
@@ -30,26 +31,27 @@ import 'package:nylo_framework/nylo_framework.dart';
 |-------------------------------------------------------------------------- */
 
 appRouter() => nyRoutes((router) {
-      router.add(HomePage.path);
+  router.add(HomePage.path);
 
-      router.add(NotFoundPage.path).unknownRoute();
-      router.add(OnboardingPage.path).initialRoute();
-      router.add(AuthPage.path);
-      router.add(FeedPage.path);
-      router.add(PeoplesPage.path);
-      router.add(VideosPage.path);
-      router.add(BlogsPage.path);
-      router.add(VideoFeedPage.path);
-      router.add(ProfilePage.path);
-      router.add(BlogDetailsPage.path);
-      router.add(QuranAuthPage.path);
-      router.add(CreateBlogPage.path);
-      router.add(CollectionsPage.path);
-      router.add(AccountInfoPage.path);
-      router.add(AppAppearancePage.path);
-      router.add(PrayerNotificationsPage.path);
-      router.add(PrivacySecurityPage.path);
-      router.add(SupportFeedbackPage.path);
-      router.add(TafsirListPage.path);
-      router.add(TafsirDetailsPage.path);
+  router.add(NotFoundPage.path).unknownRoute();
+  router.add(OnboardingPage.path).initialRoute();
+  router.add(AuthPage.path);
+  router.add(FeedPage.path);
+  router.add(PeoplesPage.path);
+  router.add(VideosPage.path);
+  router.add(BlogsPage.path);
+  router.add(VideoFeedPage.path);
+  router.add(ProfilePage.path);
+  router.add(BlogDetailsPage.path);
+  router.add(QuranAuthPage.path);
+  router.add(CreateBlogPage.path);
+  router.add(CollectionsPage.path);
+  router.add(AccountInfoPage.path);
+  router.add(AppAppearancePage.path);
+  router.add(PrayerNotificationsPage.path);
+  router.add(PrivacySecurityPage.path);
+  router.add(SupportFeedbackPage.path);
+  router.add(TafsirListPage.path);
+  router.add(TafsirDetailsPage.path);
+  router.add(MushafPage.path);
 });
