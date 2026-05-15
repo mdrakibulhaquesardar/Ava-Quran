@@ -39,6 +39,7 @@ dependencies:
   audio_service: ^0.18.17
   path_provider: ^2.1.5
   rxdart: ^0.28.0
+  geolocator: ^13.0.2
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4

@@ -18,6 +18,7 @@ import '/resources/pages/mushaf_page.dart';
 import '/config/storage_keys.dart';
 import 'package:avaquran_app/resources/widgets/playlist_view.dart';
 import 'package:avaquran_app/resources/widgets/mini_player_widget.dart';
+import '/resources/widgets/prayer_times_widget.dart';
 import 'package:avaquran_app/resources/widgets/videos_view.dart';
 
 class FeedPage extends NyStatefulWidget {
@@ -545,6 +546,9 @@ class _FeedPageState extends NyPage<FeedPage> {
                                   ),
                                 ),
                               ),
+
+                              // PRAYER TIMES SECTION
+                              const PrayerTimesWidget(),
 
                               const SizedBox(height: 16),
 
