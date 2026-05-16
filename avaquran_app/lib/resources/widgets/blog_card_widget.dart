@@ -43,7 +43,12 @@ class _BlogCardState extends NyState<BlogCard> {
     final int readTime = blog["readTime"] ?? 1;
     
     return GestureDetector(
-      onTap: () => routeTo(BlogDetailsPage.path, data: blog),
+      onTap: () {
+        // Pass the specific hero tag to the details page for a smooth transition
+        final blogData = Map<String, dynamic>.from(blog);
+        blogData['heroTag'] = "${widget.heroPrefix}-image-$id";
+        routeTo(BlogDetailsPage.path, data: blogData);
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),

@@ -895,7 +895,10 @@ class _FeedPageState extends NyPage<FeedPage> {
                                     : Column(
                                         children: _blogItems
                                             .take(3)
-                                            .map((blog) => BlogCard(blog: blog))
+                                            .map((blog) => BlogCard(
+                                                  blog: blog,
+                                                  heroPrefix: 'feed-blog',
+                                                ))
                                             .toList(),
                                       ),
                               ),
@@ -1808,7 +1811,10 @@ class _FeedPageState extends NyPage<FeedPage> {
                 }
 
                 // Remaining items
-                return BlogCard(blog: blog);
+                return BlogCard(
+                  blog: blog,
+                  heroPrefix: 'blogs-tab',
+                );
               },
             ),
           ),
@@ -1824,7 +1830,11 @@ class _FeedPageState extends NyPage<FeedPage> {
     final String? thumbUrl = blog["thumbnailUrl"];
 
     return GestureDetector(
-      onTap: () => routeTo(BlogDetailsPage.path, data: blog),
+      onTap: () {
+        final blogData = Map<String, dynamic>.from(blog);
+        blogData['heroTag'] = "blog-image-$id";
+        routeTo(BlogDetailsPage.path, data: blogData);
+      },
       child: Container(
         width: double.infinity,
         height: 220,

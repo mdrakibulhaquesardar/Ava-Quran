@@ -220,7 +220,10 @@ class _BlogsPageState extends NyPage<BlogsPage> {
                         );
                       }
 
-                      return BlogCard(blog: blog);
+                      return BlogCard(
+                        blog: blog,
+                        heroPrefix: 'blogs-page',
+                      );
                     },
                   ),
                 ),
@@ -234,7 +237,11 @@ class _BlogsPageState extends NyPage<BlogsPage> {
     final String? thumbUrl = blog["thumbnailUrl"];
 
     return GestureDetector(
-      onTap: () => routeTo(BlogDetailsPage.path, data: blog),
+      onTap: () {
+        final blogData = Map<String, dynamic>.from(blog);
+        blogData['heroTag'] = "blog-image-$id";
+        routeTo(BlogDetailsPage.path, data: blogData);
+      },
       child: Container(
         width: double.infinity,
         height: 240,

@@ -113,7 +113,7 @@ class _BlogDetailsPageState extends NyPage<BlogDetailsPage> {
                 children: [
                   // Hero transitions bounded from parent lists
                   Hero(
-                    tag: "blog-image-$id",
+                    tag: _blogData["heroTag"] ?? "blog-image-$id",
                     child: (thumbUrl != null && thumbUrl.isNotEmpty)
                         ? CachedNetworkImage(
                             imageUrl: thumbUrl,
