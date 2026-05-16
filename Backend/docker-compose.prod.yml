@@ -1,0 +1,53 @@
+name: ava-quran-backend-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ava}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ava_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-ava_quran}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ava} -d ${POSTGRES_DB:-ava_quran}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    restart: always
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ava}:${POSTGRES_PASSWORD:-ava_password_change_me}@postgres:5432/${POSTGRES_DB:-ava_quran}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-please_change_me_to_a_long_random_string}
+      # External APIs
+      QURAN_CLIENT_ID: ${QURAN_CLIENT_ID:-}
+      QURAN_CLIENT_SECRET: ${QURAN_CLIENT_SECRET:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata_prod:
