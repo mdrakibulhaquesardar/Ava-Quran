@@ -5,6 +5,7 @@ import 'package:nylo_framework/nylo_framework.dart';
 import 'package:avaquran_app/app/networking/prayer_api_service.dart';
 import 'package:avaquran_app/app/services/location_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shimmer/shimmer.dart';
 
 class PrayerTimesWidget extends StatefulWidget {
   const PrayerTimesWidget({super.key});
@@ -115,19 +116,15 @@ class _PrayerTimesWidgetState extends State<PrayerTimesWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Container(
-        height: 100,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.grey.withAlpha(20),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Center(child: CircularProgressIndicator()),
-      );
+    // 1. Initial Load: Show Shimmer Skeleton
+    if (_isLoading && _timings == null) {
+      return _buildSkeleton();
     }
 
-    if (_timings == null) return const SizedBox.shrink();
+    // 2. Error or Empty (Should not happen with fallback)
+    if (_timings == null && !_isLoading) return const SizedBox.shrink();
+
+    // 3. Normal View (also used during background refresh)
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -189,7 +186,7 @@ class _PrayerTimesWidgetState extends State<PrayerTimesWidget> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            "${_dateInfo?['hijri']?['day']} ${_dateInfo?['hijri']?['month']?['en']} ${_dateInfo?['hijri']?['year']}",
+                            _dateInfo?['readable'] ?? "",
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -254,6 +251,21 @@ class _PrayerTimesWidgetState extends State<PrayerTimesWidget> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        height: 140,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
         ),
       ),
     );
