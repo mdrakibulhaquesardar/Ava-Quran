@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="avaquran_app/assets/app_icon/icon_tbg.png" width="150" alt="Ava Qurania Icon" />
+</p>
+
 # 🌟 Ava Qurania — Sacred Stillness in Every Verse
 
 [![Quran Foundation Hackathon](https://img.shields.io/badge/Quran_Foundation-Hackathon_2026-brightgreen?style=for-the-badge&logo=quran)](https://launch.provisioncapital.com/quran-hackathon)
@@ -12,6 +16,7 @@
 ## 📖 Table of Contents
 - [✨ The Inspiration & Challenge](#-the-inspiration--challenge)
 - [📱 Core Features](#-core-features)
+- [📸 App Screenshots](#-app-screenshots)
 - [🔌 Quran Foundation API Integration (Technical Requirements)](#-quran-foundation-api-integration-technical-requirements)
 - [🏗️ Ecosystem Architecture](#%EF%B8%8F-ecosystem-architecture)
 - [🎨 Design Aesthetics & UI/UX](#-design-aesthetics--uiux)
@@ -58,6 +63,26 @@ Millions of Muslims build a deep, powerful connection with the Quran during Rama
 ### 🤝 6. Social Discovery & Community
 *   Discover and follow scholars, reciters, or friends.
 *   See what your network is reading and sharing, fostering a supportive spiritual community.
+
+---
+
+## 📸 App Screenshots
+
+<div align="center">
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.00%20PM.jpeg" width="22%" />
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.01%20PM.jpeg" width="22%" />
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.02%20PM.jpeg" width="22%" />
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.03%20PM.jpeg" width="22%" />
+  <br/><br/>
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.04%20PM.jpeg" width="22%" />
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.05%20PM.jpeg" width="22%" />
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.00%20PM%20(1).jpeg" width="22%" />
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.02%20PM%20(1).jpeg" width="22%" />
+  <br/><br/>
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.04%20PM%20(1).jpeg" width="22%" />
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.04%20PM%20(2).jpeg" width="22%" />
+  <img src="Scrennshots/WhatsApp%20Image%202026-05-17%20at%2011.43.05%20PM%20(1).jpeg" width="22%" />
+</div>
 
 ---
 
