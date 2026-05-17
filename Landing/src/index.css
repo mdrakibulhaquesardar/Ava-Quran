@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .sacred-shadow {
+    box-shadow: 0 20px 40px -15px rgba(0, 67, 53, 0.04);
+  }
+  .glass-player {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 67, 53, 0.05);
+  }
+  .hero-mesh {
+    background-image: linear-gradient(rgba(248, 250, 249, 0.93), rgba(248, 250, 249, 0.0)), url('https://lh3.googleusercontent.com/aida-public/AB6AXuBy-TOSiwt_HST3O7JLVGfTiW6etca4UE3MKDFzfFX5ZKjJx8TZ2RJaHq-jAtq0xHCU3F13ZhgXR9dBfTiPNyjcCy7BIcIe9MB9GsSwPq_WLLQJs1MWTM1qpJl-_R5QNn1RT2BrJpafnk0HkEB_C5dlTN-kqSAlEZAmmWZKJsXH37zDmq6AOVZeyYCB-lbBycPMqR2Zg5c4uG34ppBJOT57sh4HDqT3oP90IDQPyHYD6OJdfLOxOsOaUbx5-LPVpUm9sE975wpqSSPm');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+}
+
+body {
+  @apply bg-surface font-body-md text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed;
+}
