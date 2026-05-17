@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { APP_DOWNLOAD_LINK } from '../config';
 
 const HeroSection = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -51,7 +52,7 @@ const HeroSection = () => {
         </p>
         
         <div className="flex flex-wrap gap-4">
-          <a href="https://github.com/mdrakibulhaquesardar/Ava-Quran/releases/download/v1.0.0/avaQuraniaV1.0.0.apk" className="flex items-center gap-2 bg-primary text-on-primary px-8 py-4 rounded-full font-label-md text-label-md hover:shadow-lg scale-95 hover:scale-100 transition-all duration-150">
+          <a href={APP_DOWNLOAD_LINK} className="flex items-center gap-2 bg-primary text-on-primary px-8 py-4 rounded-full font-label-md text-label-md hover:shadow-lg scale-95 hover:scale-100 transition-all duration-150">
             <span className="material-symbols-outlined text-[1.25rem]">download</span>
             Download the App
           </a>

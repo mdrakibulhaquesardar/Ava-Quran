@@ -1,4 +1,5 @@
 import React from 'react';
+import { APP_DOWNLOAD_LINK } from '../config';
 
 const ReelsSection = () => {
   const reels = [
@@ -46,7 +47,7 @@ const ReelsSection = () => {
             Watch & Discover <br />Inspiring Moments.
           </h2>
         </div>
-        <a className="text-primary font-bold hover:underline hidden md:block" href="https://github.com/mdrakibulhaquesardar/Ava-Quran/releases/download/v1.0.0/avaQuraniaV1.0.0.apk">Open Reels in App</a>
+        <a className="text-primary font-bold hover:underline hidden md:block" href={APP_DOWNLOAD_LINK}>Open Reels in App</a>
       </div>
 
       <div className="flex gap-4 overflow-x-auto pb-8 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
@@ -91,7 +92,7 @@ const ReelsSection = () => {
       </div>
       
       <div className="md:hidden mt-4 text-center">
-        <a href="https://github.com/mdrakibulhaquesardar/Ava-Quran/releases/download/v1.0.0/avaQuraniaV1.0.0.apk" className="inline-block bg-primary text-on-primary px-8 py-3 rounded-full font-label-md text-label-md w-full">
+        <a href={APP_DOWNLOAD_LINK} className="inline-block bg-primary text-on-primary px-8 py-3 rounded-full font-label-md text-label-md w-full">
           Open Reels in App
         </a>
       </div>

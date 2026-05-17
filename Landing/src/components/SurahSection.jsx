@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { APP_DOWNLOAD_LINK } from '../config';
 
 const SurahSection = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -105,7 +106,7 @@ const SurahSection = () => {
       )}
       
       <div className="mt-8 text-center">
-        <a className="inline-flex items-center gap-2 text-primary font-bold group hover:underline" href="https://github.com/mdrakibulhaquesardar/Ava-Quran/releases/download/v1.0.0/avaQuraniaV1.0.0.apk">
+        <a className="inline-flex items-center gap-2 text-primary font-bold group hover:underline" href={APP_DOWNLOAD_LINK}>
           Open in App
           <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
         </a>
