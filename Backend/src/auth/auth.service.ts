@@ -119,7 +119,11 @@ export class AuthService {
 
 
   private getFinalRedirectUri(fallback: string): string {
-    return this.configService.get<string>('QURAN_REDIRECT_URI') || fallback;
+    const uri = this.configService.get<string>('QURAN_REDIRECT_URI') || fallback;
+    if (uri && !uri.includes('localhost') && !uri.includes('127.0.0.1')) {
+      return uri.replace(/^http:/, 'https:');
+    }
+    return uri;
   }
 
   getQuranOAuthUrl(redirectUri: string, state?: string, loginHint?: string) {

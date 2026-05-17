@@ -46,8 +46,11 @@ export class AuthController {
   @ApiQuery({ name: 'redirectUri', required: false, description: 'Custom frontend redirect URL after successful OAuth' })
   @Get('quran/login')
   quranLogin(@Req() req: any, @Query('redirectUri') queryRedirect: string, @Res() res: Response) {
-    const protocol = req.protocol;
     const host = req.get('Host');
+    let protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      protocol = 'https';
+    }
     const fallback = `${protocol}://${host}/auth/quran/callback`;
     
     const url = this.authService.getQuranOAuthUrl(queryRedirect || fallback);
@@ -62,8 +65,11 @@ export class AuthController {
   quranLink(@Req() req: any, @Query('redirectUri') queryRedirect: string, @Res() res: Response) {
     const userId = req.user.userId;
     const email = req.user.email;
-    const protocol = req.protocol;
     const host = req.get('Host');
+    let protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      protocol = 'https';
+    }
     const fallback = `${protocol}://${host}/auth/quran/callback`;
 
     // Pass userId in state so callback knows to link to THIS user instead of new creation
@@ -81,7 +87,12 @@ export class AuthController {
     @Query('state') state: string,
     @Req() req: any,
   ) {
-    const redirectUri = `${req.protocol}://${req.get('host')}${req.path}`;
+    const host = req.get('host');
+    let protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      protocol = 'https';
+    }
+    const redirectUri = `${protocol}://${host}${req.path}`;
     return this.authService.handleQuranCallback(code, redirectUri, state);
   }
 
