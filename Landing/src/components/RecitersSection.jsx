@@ -40,7 +40,7 @@ const RecitersSection = () => {
         <h2 className="text-headline-xl font-headline-xl text-primary">
           Listen to Soothing Audio <br />Recitations & Radio
         </h2>
-        <a className="text-primary font-bold hover:underline" href="#">Listen in App</a>
+        <a className="text-primary font-bold hover:underline" href="https://github.com/mdrakibulhaquesardar/Ava-Quran/releases/download/v1.0.0/avaQuraniaV1.0.0.apk">Listen in App</a>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">

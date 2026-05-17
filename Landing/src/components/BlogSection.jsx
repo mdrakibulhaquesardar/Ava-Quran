@@ -66,9 +66,9 @@ const BlogSection = () => {
       </div>
       
       <div className="mt-12 text-center">
-        <button className="bg-primary text-on-primary px-10 py-4 rounded-full font-label-md text-label-md scale-95 active:scale-90 hover:shadow-lg transition-all duration-150">
+        <a href="https://github.com/mdrakibulhaquesardar/Ava-Quran/releases/download/v1.0.0/avaQuraniaV1.0.0.apk" className="inline-block bg-primary text-on-primary px-10 py-4 rounded-full font-label-md text-label-md scale-95 active:scale-90 hover:shadow-lg transition-all duration-150">
           Explore All Features in App
-        </button>
+        </a>
       </div>
     </section>
   );

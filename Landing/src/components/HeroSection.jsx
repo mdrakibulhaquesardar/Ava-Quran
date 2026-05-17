@@ -51,10 +51,10 @@ const HeroSection = () => {
         </p>
         
         <div className="flex flex-wrap gap-4">
-          <button className="flex items-center gap-2 bg-primary text-on-primary px-8 py-4 rounded-full font-label-md text-label-md hover:shadow-lg scale-95 hover:scale-100 transition-all duration-150">
+          <a href="https://github.com/mdrakibulhaquesardar/Ava-Quran/releases/download/v1.0.0/avaQuraniaV1.0.0.apk" className="flex items-center gap-2 bg-primary text-on-primary px-8 py-4 rounded-full font-label-md text-label-md hover:shadow-lg scale-95 hover:scale-100 transition-all duration-150">
             <span className="material-symbols-outlined text-[1.25rem]">download</span>
             Download the App
-          </button>
+          </a>
           <button className="border border-outline text-primary px-8 py-4 rounded-full font-label-md text-label-md hover:bg-surface-container scale-95 hover:scale-100 transition-all duration-150">
             Discover peace
           </button>

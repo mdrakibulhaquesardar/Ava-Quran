@@ -48,10 +48,10 @@ const Navbar = () => {
           >
             {isDarkMode ? 'light_mode' : 'dark_mode'}
           </button>
-          <button className="flex items-center gap-2 bg-primary text-on-primary px-6 py-2 rounded-full font-label-md text-label-md scale-95 active:scale-90 hover:shadow-md hover:bg-primary-container transition-all duration-150">
+          <a href="https://github.com/mdrakibulhaquesardar/Ava-Quran/releases/download/v1.0.0/avaQuraniaV1.0.0.apk" className="flex items-center gap-2 bg-primary text-on-primary px-6 py-2 rounded-full font-label-md text-label-md scale-95 active:scale-90 hover:shadow-md hover:bg-primary-container transition-all duration-150">
             <span className="material-symbols-outlined text-[1.1rem]">download</span>
             Get the App
-          </button>
+          </a>
         </div>
       </div>
     </nav>
